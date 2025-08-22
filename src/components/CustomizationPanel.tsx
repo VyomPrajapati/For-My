@@ -124,20 +124,20 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
 
   return (
     <motion.div
-      className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-2 md:p-4"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
       <motion.div
-        className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
+        className="bg-white rounded-xl shadow-2xl max-w-4xl w-full h-[95vh] md:max-h-[90vh] overflow-hidden flex flex-col"
         initial={{ scale: 0.8, y: 50 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.8, y: 50 }}
         transition={{ type: "spring", damping: 25, stiffness: 300 }}
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-6">
+        <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-6 flex-shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Settings className="w-6 h-6" />
@@ -153,7 +153,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
         </div>
 
         {/* Cross-Device Instructions */}
-        <div className="bg-blue-50 border-b border-blue-200 p-4">
+        <div className="bg-blue-50 border-b border-blue-200 p-4 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="text-blue-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,7 +168,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b">
+        <div className="flex border-b flex-shrink-0">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -185,8 +185,8 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
           ))}
         </div>
 
-        {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[60vh]">
+        {/* Content - Scrollable area */}
+        <div className="flex-1 overflow-y-auto p-6">
           {activeTab === 'text' ? (
             <div className="space-y-6">
               {/* Header Section */}
@@ -600,10 +600,10 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="bg-gray-50 p-4 border-t">
+        {/* Footer - Sticky at bottom */}
+        <div className="bg-gray-50 border-t flex-shrink-0">
           {/* Mobile: Stack vertically, Desktop: Side by side */}
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 p-4">
             {/* Left side - Info and storage */}
             <div className="flex flex-col md:flex-row md:items-center gap-4">
               <p className="text-sm text-gray-600">
