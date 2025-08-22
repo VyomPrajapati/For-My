@@ -28,41 +28,89 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     setContent(currentContent);
   }, [currentContent]);
 
+  // Auto-save content changes after a delay
+  useEffect(() => {
+    if (isOpen && content !== currentContent) {
+      const timeoutId = setTimeout(() => {
+        // Only auto-save if there are actual changes
+        if (JSON.stringify(content) !== JSON.stringify(currentContent)) {
+          saveContentWithCompression(content);
+        }
+      }, 1000); // 1 second delay
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [content, currentContent, isOpen]);
+
   // Refresh content when panel opens
   useEffect(() => {
     if (isOpen) {
       // Reload content from localStorage to ensure we have the latest
-      const savedContent = JSON.parse(localStorage.getItem('websiteContent') || '{}');
-      const mergedContent = { ...currentContent, ...savedContent };
-      setContent(mergedContent);
+      const savedContent = localStorage.getItem('websiteContent');
+      if (savedContent) {
+        try {
+          const parsed = JSON.parse(savedContent);
+          
+          // Merge with current content, prioritizing localStorage for user-editable fields
+          const mergedContent = {
+            ...currentContent,
+            ...parsed,
+            // Ensure sticky notes and game message are properly loaded
+            stickyNotes: parsed.stickyNotes || currentContent.stickyNotes,
+            gameMessage: parsed.gameMessage || currentContent.gameMessage
+          };
+          
+          setContent(mergedContent);
+        } catch (error) {
+          console.error('Error parsing saved content:', error);
+          setContent(currentContent);
+        }
+      } else {
+        setContent(currentContent);
+      }
     }
   }, [isOpen, currentContent]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
-    // Save text content
-    saveContentWithCompression(content);
-    
-    // Save custom images
-    if (content.customImages.panel3) {
-      saveCustomImage('panel3', content.customImages.panel3);
+    try {
+      // Create a copy of the current content to ensure we're working with the latest
+      const contentToSave = { ...content };
+      
+      // Save text content and wait for it to complete
+      await saveContentWithCompression(contentToSave);
+      
+      // Save custom images
+      if (contentToSave.customImages.panel3) {
+        await saveCustomImage('panel3', contentToSave.customImages.panel3);
+      }
+      if (contentToSave.customImages.envelope) {
+        await saveCustomImage('envelope', contentToSave.customImages.envelope);
+      }
+      
+      // Save custom music
+      if (contentToSave.customMusic) {
+        saveCustomMusic(contentToSave.customMusic);
+      }
+      
+      // Also save to localStorage immediately for immediate access
+      localStorage.setItem('websiteContent', JSON.stringify(contentToSave));
+      
+      // Update local state to ensure consistency
+      setContent(contentToSave);
+      
+      // IMPORTANT: Update parent component AFTER content is saved
+      onContentUpdate(contentToSave);
+      
+      // Show success message
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
+    } catch (error) {
+      console.error('Error saving content:', error);
+      alert('❌ Error saving content. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
-    if (content.customImages.envelope) {
-      saveCustomImage('envelope', content.customImages.envelope);
-    }
-    
-    // Save custom music
-    if (content.customMusic) {
-      saveCustomMusic(content.customMusic);
-    }
-    
-    // IMPORTANT: Update parent component immediately
-    onContentUpdate(content);
-    
-    // Show success message
-    setShowSuccessMessage(true);
-    setTimeout(() => setShowSuccessMessage(false), 3000);
-    setIsSaving(false);
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, imageKey: string) => {
@@ -79,42 +127,55 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     }
   };
 
-  const handleImageSave = () => {
+  const handleImageSave = async () => {
     if (selectedImage && selectedImageKey) {
-      // Save image to content system
-      saveCustomImage(selectedImageKey, selectedImage);
-      
-      // Update local content state
-      const updatedContent = { ...content };
-      updatedContent.customImages = updatedContent.customImages || {};
-      updatedContent.customImages[selectedImageKey as keyof typeof updatedContent.customImages] = selectedImage;
-      setContent(updatedContent);
-      
-      // IMPORTANT: Update parent component immediately
-      onContentUpdate(updatedContent);
-      
-      alert(`Image saved for ${selectedImageKey}! It will now appear on your website.`);
-      setSelectedImage(null);
-      setSelectedImageKey('');
-      setImageFile(null);
+      try {
+        // Save image to content system and wait for it to complete
+        await saveCustomImage(selectedImageKey, selectedImage);
+        
+        // Update local content state
+        const updatedContent = { ...content };
+        updatedContent.customImages = updatedContent.customImages || {};
+        updatedContent.customImages[selectedImageKey as keyof typeof updatedContent.customImages] = selectedImage;
+        setContent(updatedContent);
+        
+        // IMPORTANT: Update parent component AFTER image is saved
+        onContentUpdate(updatedContent);
+        
+        alert(`Image saved for ${selectedImageKey}! It will now appear on your website.`);
+        setSelectedImage(null);
+        setSelectedImageKey('');
+        setImageFile(null);
+      } catch (error) {
+        console.error('Error saving image:', error);
+        alert('❌ Error saving image. Please try again.');
+      }
     }
   };
 
-  const handleImageRemove = (imageKey: string) => {
-    const updatedContent = { ...content };
-    if (updatedContent.customImages) {
-      delete updatedContent.customImages[imageKey as keyof typeof updatedContent.customImages];
-      setContent(updatedContent);
-      
-      // IMPORTANT: Update parent component immediately
-      onContentUpdate(updatedContent);
-      
-      // Also remove from localStorage
-      const currentContent = JSON.parse(localStorage.getItem('websiteContent') || '{}');
-      if (currentContent.customImages) {
-        delete currentContent.customImages[imageKey];
-        localStorage.setItem('websiteContent', JSON.stringify(currentContent));
+  const handleImageRemove = async (imageKey: string) => {
+    try {
+      const updatedContent = { ...content };
+      if (updatedContent.customImages) {
+        delete updatedContent.customImages[imageKey as keyof typeof updatedContent.customImages];
+        setContent(updatedContent);
+        
+        // Save the updated content to ensure it persists
+        await saveContentWithCompression(updatedContent);
+        
+        // IMPORTANT: Update parent component AFTER content is saved
+        onContentUpdate(updatedContent);
+        
+        // Also remove from localStorage
+        const currentContent = JSON.parse(localStorage.getItem('websiteContent') || '{}');
+        if (currentContent.customImages) {
+          delete currentContent.customImages[imageKey];
+          localStorage.setItem('websiteContent', JSON.stringify(currentContent));
+        }
       }
+    } catch (error) {
+      console.error('Error removing image:', error);
+      alert('❌ Error removing image. Please try again.');
     }
   };
 
@@ -424,7 +485,8 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                         onChange={(e) => {
                           const newNotes = [...content.stickyNotes];
                           newNotes[index] = e.target.value;
-                          setContent({ ...content, stickyNotes: newNotes });
+                          const updatedContent = { ...content, stickyNotes: newNotes };
+                          setContent(updatedContent);
                         }}
                         className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                         placeholder={`Sticky note ${index + 1}...`}
@@ -463,7 +525,10 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                   </label>
                   <textarea
                     value={content.gameMessage}
-                    onChange={(e) => setContent({ ...content, gameMessage: e.target.value })}
+                    onChange={(e) => {
+                      const updatedContent = { ...content, gameMessage: e.target.value };
+                      setContent(updatedContent);
+                    }}
                     rows={3}
                     className="w-full px-3 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     placeholder="Write the message shown when someone completes the heart-catching game..."

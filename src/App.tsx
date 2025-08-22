@@ -209,7 +209,9 @@ function App() {
           const saved = localStorage.getItem('websiteContent');
           if (saved) {
             const parsed = JSON.parse(saved);
-            setWebsiteContent({ ...defaultContent, ...parsed });
+            // Ensure all required fields are present by merging with defaults
+            const mergedContent = { ...defaultContent, ...parsed };
+            setWebsiteContent(mergedContent);
           } else {
             setWebsiteContent(defaultContent);
           }
@@ -229,7 +231,6 @@ function App() {
       const unsubscribe = subscribeToFirebaseUpdates((newContent) => {
         if (newContent) {
           setWebsiteContent(newContent);
-          console.log('✅ Content updated from Firebase');
         }
       });
 
@@ -341,6 +342,11 @@ function App() {
     
     // Save to both localStorage and Firebase
     saveContent(newContent);
+    
+    // Force a re-render by updating the state again to ensure changes are reflected
+    setTimeout(() => {
+      setWebsiteContent(prev => ({ ...prev, ...newContent }));
+    }, 100);
     
     // Refresh audio if custom music changed
     if (newContent.customMusic !== websiteContent.customMusic) {
