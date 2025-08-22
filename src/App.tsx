@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Play, Pause, Volume2, VolumeX, Settings } from 'lucide-react';
 import HeartCatcherGame from './components/HeartCatcherGame';
@@ -6,7 +6,15 @@ import ScrollReveal from './components/ScrollReveal';
 import CustomizationPanel from './components/CustomizationPanel';
 import LoginModal from './components/LoginModal';
 import UserInfo from './components/UserInfo';
-import { WebsiteContent, loadContent, saveContent, getCustomImage, getCustomMusic } from './utils/contentManager';
+import { 
+  WebsiteContent, 
+  defaultContent, 
+  saveContent, 
+  getCustomImage, 
+  getCustomMusic,
+  syncContentFromFirebase,
+  subscribeToFirebaseUpdates
+} from './utils/contentManager';
 import { isAuthenticated, isKaleshiAurat, getCurrentUser } from './utils/auth';
 
 // Import images
@@ -30,6 +38,7 @@ interface EnvelopeAnimationProps {
   onOpenComplete: () => void;
   envelopeLetterTitle?: string;
   envelopeLetterContent?: string;
+  envelopeImage?: string;
 }
 
 interface Heart {
@@ -52,7 +61,12 @@ const StickyNote: React.FC<StickyNoteProps> = ({ text, style, delay = 0 }) => (
 );
 
 // EnvelopeAnimation component
-const EnvelopeAnimation: React.FC<EnvelopeAnimationProps> = ({ onOpenComplete, envelopeLetterTitle, envelopeLetterContent }) => {
+const EnvelopeAnimation: React.FC<EnvelopeAnimationProps> = ({ 
+  onOpenComplete, 
+  envelopeLetterTitle, 
+  envelopeLetterContent,
+  envelopeImage 
+}) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [showLetter, setShowLetter] = useState<boolean>(false);
 
@@ -84,7 +98,7 @@ const EnvelopeAnimation: React.FC<EnvelopeAnimationProps> = ({ onOpenComplete, e
           }}
         >
           <img 
-            src={getCustomImage('envelope') || EnvelopeGif} 
+            src={envelopeImage || EnvelopeGif} 
             alt="Animated hearts" 
             className="w-full h-full object-contain filter drop-shadow-lg"
             style={{ pointerEvents: 'none' }}
@@ -159,10 +173,15 @@ function App() {
   const [showGame, setShowGame] = useState<boolean>(false);
   const [gameCompleted, setGameCompleted] = useState<boolean>(false);
   const [showCustomization, setShowCustomization] = useState<boolean>(false);
-  const [websiteContent, setWebsiteContent] = useState<WebsiteContent>(loadContent());
+  const [websiteContent, setWebsiteContent] = useState<WebsiteContent>(defaultContent);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(isAuthenticated());
   const [isKaleshiAuratUser, setIsKaleshiAuratUser] = useState<boolean>(isKaleshiAurat());
   const [currentUser, setCurrentUser] = useState<any>(getCurrentUser());
+
+  // Helper function to get custom images synchronously from local state
+  const getCustomImageSync = (imageKey: string): string | null => {
+    return websiteContent.customImages?.[imageKey as keyof typeof websiteContent.customImages] || null;
+  };
 
   useEffect(() => {
     if (initialLetterOpened && !showContent) {
@@ -176,6 +195,47 @@ function App() {
     setIsKaleshiAuratUser(isKaleshiAurat());
     setCurrentUser(getCurrentUser());
   }, []);
+
+  // Load content on mount
+  useEffect(() => {
+    const loadInitialContent = async () => {
+      try {
+        // Try to sync from Firebase first
+        const firebaseContent = await syncContentFromFirebase();
+        if (firebaseContent) {
+          setWebsiteContent(firebaseContent);
+        } else {
+          // Fallback to localStorage
+          const saved = localStorage.getItem('websiteContent');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            setWebsiteContent({ ...defaultContent, ...parsed });
+          } else {
+            setWebsiteContent(defaultContent);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading initial content:', error);
+        setWebsiteContent(defaultContent);
+      }
+    };
+
+    loadInitialContent();
+  }, []);
+
+  // Subscribe to Firebase updates
+  useEffect(() => {
+    if (isLoggedIn) {
+      const unsubscribe = subscribeToFirebaseUpdates((newContent) => {
+        if (newContent) {
+          setWebsiteContent(newContent);
+          console.log('✅ Content updated from Firebase');
+        }
+      });
+
+      return unsubscribe;
+    }
+  }, [isLoggedIn]);
 
   useEffect(() => {
     // Ensure audio element exists
@@ -192,9 +252,8 @@ function App() {
     setAudio(audioElement);
     
     // Set initial audio source immediately
-    const customMusic = getCustomMusic();
-    if (customMusic) {
-      audioElement.src = customMusic;
+    if (websiteContent.customMusic) {
+      audioElement.src = websiteContent.customMusic;
       audioElement.load();
     } else {
       audioElement.src = musicFile;
@@ -216,10 +275,9 @@ function App() {
       }
 
       // Always ensure audio source is set and loaded
-      const customMusic = getCustomMusic();
-      if (customMusic) {
-        if (audioElement.src !== customMusic) {
-          audioElement.src = customMusic;
+      if (websiteContent.customMusic) {
+        if (audioElement.src !== websiteContent.customMusic) {
+          audioElement.src = websiteContent.customMusic;
         }
       } else {
         if (audioElement.src !== musicFile) {
@@ -277,11 +335,11 @@ function App() {
     setTimeout(() => setHearts((hs) => hs.filter((h) => h.id !== newHeart.id)), 1500);
   };
 
-  const handleContentUpdate = (newContent: WebsiteContent) => {
+  const handleContentUpdate = async (newContent: WebsiteContent) => {
     // Update local state immediately
     setWebsiteContent(newContent);
     
-    // Save to localStorage
+    // Save to both localStorage and Firebase
     saveContent(newContent);
     
     // Refresh audio if custom music changed
@@ -297,9 +355,6 @@ function App() {
         setIsPlaying(false);
       }
     }
-    
-    // Force re-render to ensure all components update
-    setWebsiteContent({ ...newContent });
   };
 
   // Show login screen first if not authenticated
@@ -324,6 +379,7 @@ function App() {
       onOpenComplete={() => { setInitialLetterOpened(true); setShowLetter(true); }}
       envelopeLetterTitle={websiteContent.envelopeLetterTitle}
       envelopeLetterContent={websiteContent.envelopeLetterContent}
+      envelopeImage={getCustomImageSync('envelope') || EnvelopeGif}
     />;
   }
 
@@ -506,7 +562,7 @@ function App() {
                 {websiteContent.panel3Text || "Add your panel 3 text here..."}
               </p>
             </div>
-            <img src={getCustomImage('panel3') || Img3} alt="Custom image" className="rounded-lg mb-4 w-full h-48 md:h-64 object-cover" />
+            <img src={getCustomImageSync('panel3') || Img3} alt="Custom image" className="rounded-lg mb-4 w-full h-48 md:h-64 object-cover" />
             <p className="text-sm md:text-base text-gray-700 font-comic text-center">
               {websiteContent.panel3Caption || "Add your panel 3 caption here..."}
             </p>

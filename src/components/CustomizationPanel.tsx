@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Save, Upload, X, Edit3, Image as ImageIcon, Download, Upload as UploadIcon } from 'lucide-react';
-import { WebsiteContent, saveContentWithCompression, saveCustomImage, saveCustomMusic, getStorageSizeMB, exportContent, importContent } from '../utils/contentManager';
+import { Settings, Save, Upload, X, Edit3, Image as ImageIcon, Download, Upload as UploadIcon, Trash2, Music, FileText, Heart } from 'lucide-react';
+import { WebsiteContent, saveContentWithCompression, saveCustomImage, saveCustomMusic, getStorageSizeMB, exportContent, importContent, isFirebaseAvailable } from '../utils/contentManager';
 
 interface CustomizationPanelProps {
   isOpen: boolean;
@@ -17,11 +17,12 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
   currentContent
 }) => {
   const [content, setContent] = useState<WebsiteContent>(currentContent);
-  const [activeTab, setActiveTab] = useState<'text' | 'images'>('text');
+  const [activeTab, setActiveTab] = useState<'text' | 'images' | 'music'>('text');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedImageKey, setSelectedImageKey] = useState<string>('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     setContent(currentContent);
@@ -38,6 +39,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
   }, [isOpen, currentContent]);
 
   const handleSave = () => {
+    setIsSaving(true);
     // Save text content
     saveContentWithCompression(content);
     
@@ -60,6 +62,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     // Show success message
     setShowSuccessMessage(true);
     setTimeout(() => setShowSuccessMessage(false), 3000);
+    setIsSaving(false);
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, imageKey: string) => {
@@ -116,78 +119,107 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
   };
 
   const tabs = [
-    { id: 'text', label: 'Edit Text', icon: Edit3 },
-    { id: 'images', label: 'Upload Images', icon: ImageIcon }
+    { id: 'text', label: 'Text Content', icon: FileText },
+    { id: 'images', label: 'Images', icon: ImageIcon },
+    { id: 'music', label: 'Music', icon: Music }
   ];
 
   if (!isOpen) return null;
 
   return (
     <motion.div
-      className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-2 md:p-4"
+      className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-2 md:p-4 z-50"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      onClick={onClose}
     >
       <motion.div
-        className="bg-white rounded-xl shadow-2xl max-w-4xl w-full h-[95vh] md:max-h-[90vh] overflow-hidden flex flex-col"
-        initial={{ scale: 0.8, y: 50 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.8, y: 50 }}
-        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+        className="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[95vh] md:max-h-[90vh] flex flex-col overflow-hidden"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-pink-500 to-purple-500 text-white p-6 flex-shrink-0">
+        {/* Header - Fixed at top */}
+        <div className="bg-gradient-to-r from-pink-500 to-purple-600 text-white p-4 flex-shrink-0">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <h2 className="text-xl md:text-2xl font-bold flex items-center gap-2">
               <Settings className="w-6 h-6" />
-              <h2 className="text-2xl font-bold">Customize Your Website</h2>
-            </div>
+              Customize Your Website
+            </h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-white/20 rounded-full transition-colors"
+              className="text-white hover:text-gray-200 transition-colors p-2"
             >
               <X className="w-6 h-6" />
             </button>
           </div>
         </div>
 
-        {/* Cross-Device Instructions */}
-        <div className="bg-blue-50 border-b border-blue-200 p-4 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="text-blue-600">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div className="text-sm text-blue-800">
-              <p className="font-medium">💡 Want to share your customizations across devices?</p>
-              <p className="text-blue-600">Use the <strong>Export</strong> button to download your settings, then <strong>Import</strong> them on other devices!</p>
-            </div>
+        {/* Firebase Status - Fixed below header */}
+        <div className="bg-blue-50 border-b border-blue-200 p-3 flex-shrink-0">
+          <div className="flex items-center space-x-2">
+            <div className={`w-3 h-3 rounded-full ${isFirebaseAvailable() ? 'bg-green-500' : 'bg-red-500'}`}></div>
+            <p className="text-sm font-medium text-blue-800">
+              {isFirebaseAvailable() ? '🟢 Firebase Connected' : '🔴 Firebase Not Connected'}
+            </p>
+          </div>
+          {isFirebaseAvailable() ? (
+            <p className="text-xs text-blue-700 mt-1">
+              ✨ All changes will automatically sync across all devices!
+            </p>
+          ) : (
+            <p className="text-xs text-red-700 mt-1">
+              ⚠️ Please follow FIREBASE_SETUP.md to enable cross-device sync.
+            </p>
+          )}
+        </div>
+
+        {/* Save Button - Fixed below Firebase status for mobile */}
+        <div className="bg-gray-100 border-b border-gray-200 p-3 flex-shrink-0 md:hidden">
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="w-full bg-pink-500 hover:bg-pink-600 disabled:bg-gray-400 text-white py-3 px-6 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+          >
+            {isSaving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Heart className="w-5 h-5" />
+                <span>Save All Changes</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Tabs - Fixed below save button */}
+        <div className="bg-white border-b border-gray-200 flex-shrink-0">
+          <div className="flex space-x-1 p-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as 'text' | 'images' | 'music')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-pink-500 text-white'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b flex-shrink-0">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as 'text' | 'images')}
-              className={`flex items-center gap-2 px-6 py-4 font-medium transition-colors ${
-                activeTab === tab.id
-                  ? 'text-pink-600 border-b-2 border-pink-600'
-                  : 'text-gray-600 hover:text-pink-500'
-              }`}
-            >
-              <tab.icon className="w-5 h-5" />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Content - Scrollable area */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {activeTab === 'text' ? (
+        {/* Content Area - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {/* Content based on active tab */}
+          {activeTab === 'text' && (
             <div className="space-y-6">
               {/* Header Section */}
               <div className="bg-gray-50 p-4 rounded-lg">
@@ -445,7 +477,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                   🎵 Background Music
                 </h3>
                 <p className="text-sm text-yellow-600 mb-3">
-                  Upload your own music file to replace the default background music
+                  Upload your own music file to replace the default background music. Supported formats: MP3, WAV, OGG
                 </p>
                 <div className="space-y-3">
                   <div>
@@ -458,6 +490,12 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) {
+                          // Check file size (max 5MB)
+                          if (file.size > 5 * 1024 * 1024) {
+                            alert('❌ File too large! Please choose a file smaller than 5MB.');
+                            return;
+                          }
+                          
                           const reader = new FileReader();
                           reader.onload = (event) => {
                             const result = event.target?.result as string;
@@ -468,26 +506,45 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                       }}
                       className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
                     />
+                    <p className="text-xs text-yellow-600 mt-1">
+                      Max file size: 5MB. Large files will be automatically compressed.
+                    </p>
                   </div>
+                  
                   {content.customMusic && (
                     <div className="bg-yellow-100 p-3 rounded-lg">
-                      <p className="text-sm text-yellow-700 mb-2">Custom music uploaded!</p>
-                      <audio controls className="w-full">
-                        <source src={content.customMusic} type="audio/mpeg" />
-                        Your browser does not support the audio element.
-                      </audio>
-                      <button
-                        onClick={() => setContent({ ...content, customMusic: "" })}
-                        className="mt-2 px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
-                      >
-                        Remove Music
-                      </button>
+                      <p className="text-sm text-yellow-700 mb-2 font-medium">
+                        ✅ Custom music uploaded successfully!
+                      </p>
+                      <div className="space-y-2">
+                        <audio controls className="w-full">
+                          <source src={content.customMusic} type="audio/mpeg" />
+                          Your browser does not support the audio element.
+                        </audio>
+                        <button
+                          onClick={() => setContent({ ...content, customMusic: "" })}
+                          className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors flex items-center gap-2"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Remove Music
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {!content.customMusic && (
+                    <div className="bg-gray-100 p-3 rounded-lg">
+                      <p className="text-sm text-gray-600">
+                        No custom music uploaded. The default music will play.
+                      </p>
                     </div>
                   )}
                 </div>
               </div>
             </div>
-          ) : (
+          )}
+
+          {activeTab === 'images' && (
             <div className="space-y-6">
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h3 className="text-lg font-semibold text-gray-800 mb-3">Upload Custom Images</h3>
@@ -598,80 +655,118 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
               </div>
             </div>
           )}
+
+          {activeTab === 'music' && (
+            <div className="space-y-6">
+              <div className="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-400">
+                <h3 className="text-lg font-semibold text-yellow-800 mb-3 flex items-center gap-2">
+                  🎵 Background Music
+                </h3>
+                <p className="text-sm text-yellow-600 mb-3">
+                  Upload your own music file to replace the default background music. Supported formats: MP3, WAV, OGG
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-yellow-700 mb-1">
+                      Choose Music File
+                    </label>
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          // Check file size (max 5MB)
+                          if (file.size > 5 * 1024 * 1024) {
+                            alert('❌ File too large! Please choose a file smaller than 5MB.');
+                            return;
+                          }
+                          
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const result = event.target?.result as string;
+                            setContent({ ...content, customMusic: result });
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-yellow-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-yellow-600 mt-1">
+                      Max file size: 5MB. Large files will be automatically compressed.
+                    </p>
+                  </div>
+                  
+                  {content.customMusic && (
+                    <div className="bg-yellow-100 p-3 rounded-lg">
+                      <p className="text-sm text-yellow-700 mb-2 font-medium">
+                        ✅ Custom music uploaded successfully!
+                      </p>
+                      <div className="space-y-2">
+                        <audio controls className="w-full">
+                          <source src={content.customMusic} type="audio/mpeg" />
+                          Your browser does not support the audio element.
+                        </audio>
+                        <button
+                          onClick={() => setContent({ ...content, customMusic: "" })}
+                          className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors flex items-center gap-2"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Remove Music
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {!content.customMusic && (
+                    <div className="bg-gray-100 p-3 rounded-lg">
+                      <p className="text-sm text-gray-600">
+                        No custom music uploaded. The default music will play.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Footer - Sticky at bottom */}
-        <div className="bg-gray-50 border-t flex-shrink-0">
-          {/* Mobile: Stack vertically, Desktop: Side by side */}
-          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 p-4">
-            {/* Left side - Info and storage */}
-            <div className="flex flex-col md:flex-row md:items-center gap-4">
-              <p className="text-sm text-gray-600">
-                💡 All changes are saved locally and will persist after refreshing the page
-              </p>
-              <div className={`text-xs ${getStorageSizeMB() > 4 ? 'text-red-500' : 'text-gray-500'}`}>
-                Storage: {getStorageSizeMB().toFixed(2)} MB / 5 MB
-                {getStorageSizeMB() > 4 && (
-                  <span className="block text-red-600 font-semibold">
-                    ⚠️ Storage almost full! Large files will be compressed.
-                  </span>
-                )}
-              </div>
+        {/* Footer - Desktop only (mobile has save button at top) */}
+        <div className="hidden md:flex flex-col md:flex-row items-center justify-between p-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+          <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-4 mb-4 md:mb-0">
+            <div className={`text-xs ${getStorageSizeMB() > 4 ? 'text-red-500' : 'text-gray-500'}`}>
+              Storage: {getStorageSizeMB().toFixed(2)} MB / 5 MB
+              {getStorageSizeMB() > 4 && (
+                <span className="block text-red-600 font-semibold">
+                  ⚠️ Storage almost full! Large files will be compressed.
+                </span>
+              )}
             </div>
-            
-            {/* Right side - Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              {/* Export/Import Section */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => exportContent(content)}
-                  className="px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors flex items-center gap-2 justify-center"
-                  title="Export your customizations to share across devices"
-                >
-                  <Download className="w-4 h-4" />
-                  Export
-                </button>
-                <label className="px-3 py-2 bg-green-500 text-white rounded text-sm hover:bg-green-600 transition-colors flex items-center gap-2 cursor-pointer justify-center">
-                  <UploadIcon className="w-4 h-4" />
-                  Import
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        try {
-                          const importedContent = await importContent(file);
-                          setContent(importedContent);
-                          onContentUpdate(importedContent);
-                          alert('✅ Customizations imported successfully! Your website will now show the imported content.');
-                        } catch (error) {
-                          alert('❌ Error importing file. Please make sure it\'s a valid export file.');
-                        }
-                      }
-                    }}
-                    className="hidden"
-                  />
-                </label>
+            {isFirebaseAvailable() && (
+              <div className="text-xs text-green-600">
+                🔥 Firebase: Real-time sync active
               </div>
-              
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <button
-                  onClick={onClose}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  className="px-6 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg hover:from-pink-600 hover:to-purple-600 transition-all flex items-center gap-2 justify-center"
-                >
-                  <Save className="w-4 h-4" />
-                  Save Changes
-                </button>
-              </div>
-            </div>
+            )}
+          </div>
+          
+          <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-4">
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="bg-pink-500 hover:bg-pink-600 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+            >
+              {isSaving ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Heart className="w-4 h-4" />
+                  <span>Save Changes</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
       </motion.div>

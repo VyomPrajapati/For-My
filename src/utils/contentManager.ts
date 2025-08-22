@@ -1,3 +1,5 @@
+import { saveContentToFirebase, getContentFromFirebase, subscribeToContentUpdates, isFirebaseAvailable } from '../firebase/contentService';
+
 export interface WebsiteContent {
   // Header
   mainTitle: string;
@@ -90,31 +92,53 @@ export const defaultContent: WebsiteContent = {
   profilePictures: {},
 };
 
-export const loadContent = (): WebsiteContent => {
+// Enhanced saveContent function that saves to both localStorage and Firebase
+export const saveContent = (content: WebsiteContent): void => {
   try {
+    // Save to localStorage first
+    localStorage.setItem('websiteContent', JSON.stringify(content));
+    
+    // Also save to Firebase if available
+    if (isFirebaseAvailable()) {
+      saveContentToFirebase(content).catch(error => {
+        console.warn('⚠️ Firebase save failed, but localStorage save succeeded:', error);
+      });
+    }
+  } catch (error) {
+    console.error('Error saving content:', error);
+  }
+};
+
+// Enhanced loadContent function that tries Firebase first, then localStorage
+export const loadContent = async (): Promise<WebsiteContent> => {
+  try {
+    // Try Firebase first if available
+    if (isFirebaseAvailable()) {
+      const firebaseContent = await getContentFromFirebase();
+      if (firebaseContent) {
+        // Save to localStorage for offline access
+        localStorage.setItem('websiteContent', JSON.stringify(firebaseContent));
+        return firebaseContent;
+      }
+    }
+    
+    // Fallback to localStorage
     const saved = localStorage.getItem('websiteContent');
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Merge with default content to ensure all fields exist
       return { ...defaultContent, ...parsed };
     }
   } catch (error) {
-    console.error('Error loading content from localStorage:', error);
+    console.error('Error loading content:', error);
   }
+  
   return defaultContent;
 };
 
-export const saveContent = (content: WebsiteContent): void => {
+// Save custom image
+export const saveCustomImage = async (imageKey: string, imageData: string): Promise<void> => {
   try {
-    localStorage.setItem('websiteContent', JSON.stringify(content));
-  } catch (error) {
-    console.error('Error saving content to localStorage:', error);
-  }
-};
-
-export const saveCustomImage = (imageKey: string, imageData: string): void => {
-  try {
-    const content = loadContent();
+    const content = await loadContent();
     content.customImages = content.customImages || {};
     content.customImages[imageKey as keyof typeof content.customImages] = imageData;
     saveContent(content);
@@ -123,9 +147,10 @@ export const saveCustomImage = (imageKey: string, imageData: string): void => {
   }
 };
 
-export const getCustomImage = (imageKey: string): string | null => {
+// Get custom image
+export const getCustomImage = async (imageKey: string): Promise<string | null> => {
   try {
-    const content = loadContent();
+    const content = await loadContent();
     return content.customImages?.[imageKey as keyof typeof content.customImages] || null;
   } catch (error) {
     console.error('Error loading custom image:', error);
@@ -185,9 +210,9 @@ export const removeCustomMusic = (): void => {
 };
 
 // Save profile picture
-export const saveProfilePicture = (userType: 'kaleshiAurat' | 'user', imageData: string): void => {
+export const saveProfilePicture = async (userType: 'kaleshiAurat' | 'user', imageData: string): Promise<void> => {
   try {
-    const content = loadContent();
+    const content = await loadContent();
     content.profilePictures = content.profilePictures || {};
     content.profilePictures[userType] = imageData;
     saveContent(content);
@@ -197,9 +222,9 @@ export const saveProfilePicture = (userType: 'kaleshiAurat' | 'user', imageData:
 };
 
 // Get profile picture
-export const getProfilePicture = (userType: 'kaleshiAurat' | 'user'): string | null => {
+export const getProfilePicture = async (userType: 'kaleshiAurat' | 'user'): Promise<string | null> => {
   try {
-    const content = loadContent();
+    const content = await loadContent();
     return content.profilePictures?.[userType] || null;
   } catch (error) {
     console.error('Error loading profile picture:', error);
@@ -208,9 +233,9 @@ export const getProfilePicture = (userType: 'kaleshiAurat' | 'user'): string | n
 };
 
 // Remove profile picture
-export const removeProfilePicture = (userType: 'kaleshiAurat' | 'user'): void => {
+export const removeProfilePicture = async (userType: 'kaleshiAurat' | 'user'): Promise<void> => {
   try {
-    const content = loadContent();
+    const content = await loadContent();
     if (content.profilePictures) {
       delete content.profilePictures[userType];
       saveContent(content);
@@ -239,37 +264,39 @@ export const getStorageSizeMB = (): number => {
   return getStorageSize() / (1024 * 1024);
 };
 
-export const cleanupOldData = (): void => {
+// Clean up old data to prevent storage quota issues
+export const cleanupOldData = async (): Promise<void> => {
   try {
-    // Remove old profile pictures if they're too large
-    const content = loadContent();
+    const content = await loadContent();
+    
+    // Clean up oversized profile pictures (over 500KB)
     if (content.profilePictures) {
       for (const [userType, picture] of Object.entries(content.profilePictures)) {
-        if (picture && picture.length > 500000) { // 500KB limit
-          console.log(`Removing large profile picture for ${userType}`);
+        if (picture && picture.length > 500000) {
+          console.log(`Cleaning up oversized profile picture for ${userType}`);
           delete content.profilePictures[userType as keyof typeof content.profilePictures];
         }
       }
-      saveContent(content);
     }
     
-    // Remove old custom images if they're too large
+    // Clean up oversized custom images (over 1MB)
     if (content.customImages) {
       for (const [imageKey, image] of Object.entries(content.customImages)) {
-        if (image && image.length > 1000000) { // 1MB limit
-          console.log(`Removing large custom image for ${imageKey}`);
+        if (image && image.length > 1000000) {
+          console.log(`Cleaning up oversized custom image: ${imageKey}`);
           delete content.customImages[imageKey as keyof typeof content.customImages];
         }
       }
-      saveContent(content);
     }
     
-    // Remove old custom music if it's too large
-    if (content.customMusic && content.customMusic.length > 2000000) { // 2MB limit
-      console.log('Removing large custom music');
+    // Clean up oversized custom music (over 2MB)
+    if (content.customMusic && content.customMusic.length > 2000000) {
+      console.log('Cleaning up oversized custom music');
       content.customMusic = '';
-      saveContent(content);
     }
+    
+    // Save cleaned content
+    saveContent(content);
   } catch (error) {
     console.error('Error cleaning up old data:', error);
   }
@@ -315,10 +342,11 @@ export const compressImage = (imageData: string, maxSize: number = 500000): Prom
   }
 };
 
+// Enhanced saveContentWithCompression function
 export const saveContentWithCompression = async (content: WebsiteContent): Promise<void> => {
   try {
     // Clean up old data first
-    cleanupOldData();
+    await cleanupOldData();
     
     // Check current storage size
     const currentSize = getStorageSizeMB();
@@ -349,7 +377,7 @@ export const saveContentWithCompression = async (content: WebsiteContent): Promi
       }
     }
     
-    // Save the content
+    // Save the content (both localStorage and Firebase)
     saveContent(content);
     
     console.log(`Final storage size: ${getStorageSizeMB().toFixed(2)} MB`);
@@ -359,3 +387,41 @@ export const saveContentWithCompression = async (content: WebsiteContent): Promi
     saveContent(content);
   }
 };
+
+// Function to sync content from Firebase
+export const syncContentFromFirebase = async (): Promise<WebsiteContent | null> => {
+  try {
+    if (!isFirebaseAvailable()) {
+      console.log('Firebase not available, skipping sync');
+      return null;
+    }
+    
+    const firebaseContent = await getContentFromFirebase();
+    if (firebaseContent) {
+      // Update localStorage with Firebase content
+      localStorage.setItem('websiteContent', JSON.stringify(firebaseContent));
+      console.log('✅ Content synced from Firebase');
+      return firebaseContent;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('❌ Error syncing content from Firebase:', error);
+    return null;
+  }
+};
+
+// Function to subscribe to Firebase updates
+export const subscribeToFirebaseUpdates = (
+  callback: (content: WebsiteContent | null) => void
+): (() => void) => {
+  if (!isFirebaseAvailable()) {
+    console.log('Firebase not available, cannot subscribe to updates');
+    return () => {}; // Return empty function
+  }
+  
+  return subscribeToContentUpdates(callback);
+};
+
+// Re-export isFirebaseAvailable from Firebase service
+export { isFirebaseAvailable };
