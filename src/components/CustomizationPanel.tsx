@@ -27,6 +27,16 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     setContent(currentContent);
   }, [currentContent]);
 
+  // Refresh content when panel opens
+  useEffect(() => {
+    if (isOpen) {
+      // Reload content from localStorage to ensure we have the latest
+      const savedContent = JSON.parse(localStorage.getItem('websiteContent') || '{}');
+      const mergedContent = { ...currentContent, ...savedContent };
+      setContent(mergedContent);
+    }
+  }, [isOpen, currentContent]);
+
   const handleSave = () => {
     // Save text content
     saveContent(content);
@@ -43,6 +53,9 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     if (content.customMusic) {
       saveCustomMusic(content.customMusic);
     }
+    
+    // IMPORTANT: Update parent component immediately
+    onContentUpdate(content);
     
     // Show success message
     setShowSuccessMessage(true);
@@ -74,6 +87,9 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
       updatedContent.customImages[selectedImageKey as keyof typeof updatedContent.customImages] = selectedImage;
       setContent(updatedContent);
       
+      // IMPORTANT: Update parent component immediately
+      onContentUpdate(updatedContent);
+      
       alert(`Image saved for ${selectedImageKey}! It will now appear on your website.`);
       setSelectedImage(null);
       setSelectedImageKey('');
@@ -86,6 +102,9 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     if (updatedContent.customImages) {
       delete updatedContent.customImages[imageKey as keyof typeof updatedContent.customImages];
       setContent(updatedContent);
+      
+      // IMPORTANT: Update parent component immediately
+      onContentUpdate(updatedContent);
       
       // Also remove from localStorage
       const currentContent = JSON.parse(localStorage.getItem('websiteContent') || '{}');
@@ -572,6 +591,18 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
             💡 All changes are saved locally and will persist after refreshing the page
           </p>
           <div className="flex gap-3">
+            <button
+              onClick={() => {
+                console.log('=== DEBUG: Current Content ===');
+                console.log('Local state:', content);
+                console.log('localStorage:', JSON.parse(localStorage.getItem('websiteContent') || '{}'));
+                console.log('Parent content:', currentContent);
+                console.log('=============================');
+              }}
+              className="px-3 py-2 bg-gray-500 text-white rounded text-sm hover:bg-gray-600 transition-colors"
+            >
+              🐛 Debug
+            </button>
             <button
               onClick={onClose}
               className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"

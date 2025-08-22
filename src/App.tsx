@@ -278,7 +278,10 @@ function App() {
   };
 
   const handleContentUpdate = (newContent: WebsiteContent) => {
+    // Update local state immediately
     setWebsiteContent(newContent);
+    
+    // Save to localStorage
     saveContent(newContent);
     
     // Refresh audio if custom music changed
@@ -294,6 +297,9 @@ function App() {
         setIsPlaying(false);
       }
     }
+    
+    // Force re-render to ensure all components update
+    setWebsiteContent({ ...newContent });
   };
 
   // Show login screen first if not authenticated
