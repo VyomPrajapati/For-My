@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { Heart, Play, Pause, Volume2, VolumeX, Settings } from 'lucide-react';
 import HeartCatcherGame from './components/HeartCatcherGame';
 import ScrollReveal from './components/ScrollReveal';
 import CustomizationPanel from './components/CustomizationPanel';

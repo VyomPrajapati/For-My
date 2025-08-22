@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { loginWithRole, AUTH_CONFIG } from '../utils/auth';
-import { Heart, Crown, User } from 'lucide-react';
+import { Heart, Crown, User, Eye, EyeOff } from 'lucide-react';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -15,6 +15,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showUsername, setShowUsername] = useState(false);
 
   const handleRoleSelect = (role: 'kaleshi_aurat' | 'user') => {
     setSelectedRole(role);
@@ -203,32 +205,61 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess
 
             {/* Login Form */}
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Username
-                </label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all"
-                  placeholder="Enter your username"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all"
-                  placeholder="Enter your password"
-                  required
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Username
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showUsername ? "text" : "password"}
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all pr-10"
+                      placeholder="Enter your username"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowUsername(!showUsername)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-700 transition-colors group"
+                      title={showUsername ? "Hide username" : "Show username"}
+                    >
+                      {showUsername ? (
+                        <EyeOff className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all pr-10"
+                      placeholder="Enter your password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center hover:text-gray-700 transition-colors group"
+                      title={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-500 group-hover:text-gray-700 transition-colors" />
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Error Message */}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Save, Upload, X, Edit3, Image as ImageIcon } from 'lucide-react';
-import { WebsiteContent, saveContent, saveCustomImage, saveCustomMusic } from '../utils/contentManager';
+import { Settings, Save, Upload, X, Edit3, Image as ImageIcon, Download, Upload as UploadIcon } from 'lucide-react';
+import { WebsiteContent, saveContentWithCompression, saveCustomImage, saveCustomMusic, getStorageSizeMB, exportContent, importContent } from '../utils/contentManager';
 
 interface CustomizationPanelProps {
   isOpen: boolean;
@@ -39,7 +39,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
 
   const handleSave = () => {
     // Save text content
-    saveContent(content);
+    saveContentWithCompression(content);
     
     // Save custom images
     if (content.customImages.panel3) {
@@ -149,6 +149,21 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
             >
               <X className="w-6 h-6" />
             </button>
+          </div>
+        </div>
+
+        {/* Cross-Device Instructions */}
+        <div className="bg-blue-50 border-b border-blue-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="text-blue-600">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="text-sm text-blue-800">
+              <p className="font-medium">💡 Want to share your customizations across devices?</p>
+              <p className="text-blue-600">Use the <strong>Export</strong> button to download your settings, then <strong>Import</strong> them on other devices!</p>
+            </div>
           </div>
         </div>
 
@@ -587,10 +602,54 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
 
         {/* Footer */}
         <div className="bg-gray-50 p-4 border-t flex justify-between items-center">
-          <p className="text-sm text-gray-600">
-            💡 All changes are saved locally and will persist after refreshing the page
-          </p>
+          <div className="flex items-center gap-4">
+            <p className="text-sm text-gray-600">
+              💡 All changes are saved locally and will persist after refreshing the page
+            </p>
+            <div className={`text-xs ${getStorageSizeMB() > 4 ? 'text-red-500' : 'text-gray-500'}`}>
+              Storage: {getStorageSizeMB().toFixed(2)} MB / 5 MB
+              {getStorageSizeMB() > 4 && (
+                <span className="block text-red-600 font-semibold">
+                  ⚠️ Storage almost full! Large files will be compressed.
+                </span>
+              )}
+            </div>
+          </div>
           <div className="flex gap-3">
+            {/* Export/Import Section */}
+            <div className="flex gap-2 mr-4">
+              <button
+                onClick={() => exportContent(content)}
+                className="px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors flex items-center gap-2"
+                title="Export your customizations to share across devices"
+              >
+                <Download className="w-4 h-4" />
+                Export
+              </button>
+              <label className="px-3 py-2 bg-green-500 text-white rounded text-sm hover:bg-green-600 transition-colors flex items-center gap-2 cursor-pointer">
+                <UploadIcon className="w-4 h-4" />
+                Import
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      try {
+                        const importedContent = await importContent(file);
+                        setContent(importedContent);
+                        onContentUpdate(importedContent);
+                        alert('✅ Customizations imported successfully! Your website will now show the imported content.');
+                      } catch (error) {
+                        alert('❌ Error importing file. Please make sure it\'s a valid export file.');
+                      }
+                    }
+                  }}
+                  className="hidden"
+                />
+              </label>
+            </div>
+            
             <button
               onClick={() => {
                 console.log('=== DEBUG: Current Content ===');
