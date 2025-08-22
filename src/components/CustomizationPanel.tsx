@@ -601,80 +601,77 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="bg-gray-50 p-4 border-t flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <p className="text-sm text-gray-600">
-              💡 All changes are saved locally and will persist after refreshing the page
-            </p>
-            <div className={`text-xs ${getStorageSizeMB() > 4 ? 'text-red-500' : 'text-gray-500'}`}>
-              Storage: {getStorageSizeMB().toFixed(2)} MB / 5 MB
-              {getStorageSizeMB() > 4 && (
-                <span className="block text-red-600 font-semibold">
-                  ⚠️ Storage almost full! Large files will be compressed.
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex gap-3">
-            {/* Export/Import Section */}
-            <div className="flex gap-2 mr-4">
-              <button
-                onClick={() => exportContent(content)}
-                className="px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors flex items-center gap-2"
-                title="Export your customizations to share across devices"
-              >
-                <Download className="w-4 h-4" />
-                Export
-              </button>
-              <label className="px-3 py-2 bg-green-500 text-white rounded text-sm hover:bg-green-600 transition-colors flex items-center gap-2 cursor-pointer">
-                <UploadIcon className="w-4 h-4" />
-                Import
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      try {
-                        const importedContent = await importContent(file);
-                        setContent(importedContent);
-                        onContentUpdate(importedContent);
-                        alert('✅ Customizations imported successfully! Your website will now show the imported content.');
-                      } catch (error) {
-                        alert('❌ Error importing file. Please make sure it\'s a valid export file.');
-                      }
-                    }
-                  }}
-                  className="hidden"
-                />
-              </label>
+        <div className="bg-gray-50 p-4 border-t">
+          {/* Mobile: Stack vertically, Desktop: Side by side */}
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+            {/* Left side - Info and storage */}
+            <div className="flex flex-col md:flex-row md:items-center gap-4">
+              <p className="text-sm text-gray-600">
+                💡 All changes are saved locally and will persist after refreshing the page
+              </p>
+              <div className={`text-xs ${getStorageSizeMB() > 4 ? 'text-red-500' : 'text-gray-500'}`}>
+                Storage: {getStorageSizeMB().toFixed(2)} MB / 5 MB
+                {getStorageSizeMB() > 4 && (
+                  <span className="block text-red-600 font-semibold">
+                    ⚠️ Storage almost full! Large files will be compressed.
+                  </span>
+                )}
+              </div>
             </div>
             
-            <button
-              onClick={() => {
-                console.log('=== DEBUG: Current Content ===');
-                console.log('Local state:', content);
-                console.log('localStorage:', JSON.parse(localStorage.getItem('websiteContent') || '{}'));
-                console.log('Parent content:', currentContent);
-                console.log('=============================');
-              }}
-              className="px-3 py-2 bg-gray-500 text-white rounded text-sm hover:bg-gray-600 transition-colors"
-            >
-              🐛 Debug
-            </button>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-6 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg hover:from-pink-600 hover:to-purple-600 transition-all flex items-center gap-2"
-            >
-              <Save className="w-4 h-4" />
-              Save Changes
-            </button>
+            {/* Right side - Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Export/Import Section */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => exportContent(content)}
+                  className="px-3 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors flex items-center gap-2 justify-center"
+                  title="Export your customizations to share across devices"
+                >
+                  <Download className="w-4 h-4" />
+                  Export
+                </button>
+                <label className="px-3 py-2 bg-green-500 text-white rounded text-sm hover:bg-green-600 transition-colors flex items-center gap-2 cursor-pointer justify-center">
+                  <UploadIcon className="w-4 h-4" />
+                  Import
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        try {
+                          const importedContent = await importContent(file);
+                          setContent(importedContent);
+                          onContentUpdate(importedContent);
+                          alert('✅ Customizations imported successfully! Your website will now show the imported content.');
+                        } catch (error) {
+                          alert('❌ Error importing file. Please make sure it\'s a valid export file.');
+                        }
+                      }
+                    }}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="px-6 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg hover:from-pink-600 hover:to-purple-600 transition-all flex items-center gap-2 justify-center"
+                >
+                  <Save className="w-4 h-4" />
+                  Save Changes
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </motion.div>
