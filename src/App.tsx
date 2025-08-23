@@ -217,13 +217,22 @@ function App() {
     }
   }, [initialLetterOpened, showContent]);
 
+  // Reset envelope state when user logs in to ensure animation plays
+  useEffect(() => {
+    if (isLoggedIn && !initialLetterOpened) {
+      // If user just logged in, reset to show envelope first
+      setInitialLetterOpened(false);
+      setShowContent(false);
+    }
+  }, [isLoggedIn, initialLetterOpened]);
+
   useEffect(() => {
     setIsLoggedIn(isAuthenticated());
     setIsKaleshiAuratUser(isKaleshiAurat());
     setCurrentUser(getCurrentUser());
   }, []);
 
-  // Load content on mount
+  // Load content on mount but don't show it until envelope is opened
   useEffect(() => {
     const loadInitialContent = async () => {
       try {
