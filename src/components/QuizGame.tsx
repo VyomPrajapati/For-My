@@ -26,7 +26,6 @@ const QuizGame: React.FC<QuizGameProps> = ({ onComplete, onClose, questions, res
 
   // Single useEffect to reset state when component remounts or resetKey changes
   useEffect(() => {
-    console.log('🔄 QuizGame reset triggered - resetKey:', resetKey);
     setCurrentQuestionIndex(0);
     setSelectedAnswer(null);
     setHeartsEarned(0);

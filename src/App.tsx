@@ -72,21 +72,15 @@ const EnvelopeAnimation: React.FC<EnvelopeAnimationProps> = ({
   const [showLetter, setShowLetter] = useState<boolean>(false);
 
   const handleEnvelopeClick = () => {
-    console.log('🎯 Envelope clicked!');
     if (!isOpen) {
-      console.log('🚀 Starting envelope animation...');
       setIsOpen(true);
       setTimeout(() => {
-        console.log('📜 Showing letter...');
         setShowLetter(true);
       }, 800);
       // Give more time for the animation to complete before showing content
       setTimeout(() => {
-        console.log('✅ Envelope animation complete, calling onOpenComplete...');
         onOpenComplete();
       }, 3000);
-    } else {
-      console.log('⚠️ Envelope already open');
     }
   };
 
@@ -233,29 +227,21 @@ function App() {
   useEffect(() => {
     const loadInitialContent = async () => {
       try {
-        console.log('🔄 Loading initial content...');
-        
         // Try to sync from Firebase first
         const firebaseContent = await syncContentFromFirebase();
         if (firebaseContent) {
-          console.log('✅ Content loaded from Firebase:', firebaseContent);
           // Ensure all required properties are present by merging with defaults
           const mergedContent = { ...defaultContent, ...firebaseContent };
-          console.log('🔗 Merged Firebase content with defaults:', mergedContent);
           setWebsiteContent(mergedContent);
         } else {
-          console.log('📱 Firebase not available, loading from localStorage...');
           // Fallback to localStorage
           const saved = localStorage.getItem('websiteContent');
           if (saved) {
             const parsed = JSON.parse(saved);
-            console.log('📝 Content loaded from localStorage:', parsed);
             // Ensure all required fields are present by merging with defaults
             const mergedContent = { ...defaultContent, ...parsed };
-            console.log('🔗 Merged content:', mergedContent);
             setWebsiteContent(mergedContent);
           } else {
-            console.log('🆕 No saved content found, using defaults');
             setWebsiteContent(defaultContent);
           }
         }
@@ -436,7 +422,6 @@ function App() {
   if (!initialLetterOpened) {
     return <EnvelopeAnimation 
       onOpenComplete={() => { 
-        console.log('Envelope opened, setting initialLetterOpened to true');
         setInitialLetterOpened(true); 
         setShowLetter(true); 
       }}
@@ -448,7 +433,6 @@ function App() {
 
   // If envelope is opened but content is not showing yet, show a loading state
   if (initialLetterOpened && !showContent) {
-    console.log('📊 Current state:', { initialLetterOpened, showContent, websiteContent });
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-pink-50 flex items-center justify-center">
         <motion.div
@@ -466,9 +450,6 @@ function App() {
           <p className="text-gray-600 font-comic">
             Just a moment while we prepare everything for you! 💕
           </p>
-          <div className="mt-4 p-3 bg-gray-100 rounded text-xs text-gray-500">
-            Debug: initialLetterOpened={initialLetterOpened.toString()}, showContent={showContent.toString()}
-          </div>
         </motion.div>
       </div>
     );

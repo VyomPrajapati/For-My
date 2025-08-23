@@ -15,37 +15,38 @@ const WEBSITE_CONTENT_DOC = 'websiteContent';
 const CONTENT_COLLECTION = 'websiteContent';
 
 // Save content to Firebase
-export const saveContentToFirebase = async (content: WebsiteContent): Promise<void> => {
+export const saveContentToFirebase = async (content: WebsiteContent): Promise<boolean> => {
   try {
-    await setDoc(doc(db, CONTENT_COLLECTION, WEBSITE_CONTENT_DOC), {
-      ...content,
-      lastUpdated: new Date().toISOString(),
-      updatedBy: 'admin'
-    });
-    console.log('✅ Content saved to Firebase successfully');
+    if (!isFirebaseAvailable()) {
+      return false;
+    }
+
+    const docRef = doc(db, 'websiteContent', 'main');
+    await setDoc(docRef, content);
+    return true;
   } catch (error) {
-    console.error('❌ Error saving content to Firebase:', error);
-    throw error;
+    console.error('Error saving content to Firebase:', error);
+    return false;
   }
 };
 
 // Get content from Firebase
 export const getContentFromFirebase = async (): Promise<WebsiteContent | null> => {
   try {
-    const docRef = doc(db, CONTENT_COLLECTION, WEBSITE_CONTENT_DOC);
+    if (!isFirebaseAvailable()) {
+      return null;
+    }
+
+    const docRef = doc(db, 'websiteContent', 'main');
     const docSnap = await getDoc(docRef);
-    
+
     if (docSnap.exists()) {
-      const data = docSnap.data();
-      // Remove Firebase-specific fields
-      const { lastUpdated, updatedBy, ...content } = data;
-      return content as WebsiteContent;
+      return docSnap.data() as WebsiteContent;
     } else {
-      console.log('No content found in Firebase');
       return null;
     }
   } catch (error) {
-    console.error('❌ Error getting content from Firebase:', error);
+    console.error('Error getting content from Firebase:', error);
     return null;
   }
 };

@@ -280,30 +280,27 @@ export const cleanupOldData = async (): Promise<void> => {
   try {
     const content = await loadContent();
     
-    // Clean up oversized profile pictures (over 500KB)
+    // Clean up oversized profile pictures
     if (content.profilePictures) {
-      for (const [userType, picture] of Object.entries(content.profilePictures)) {
-        if (picture && picture.length > 500000) {
-          console.log(`Cleaning up oversized profile picture for ${userType}`);
-          delete content.profilePictures[userType as keyof typeof content.profilePictures];
+      Object.entries(content.profilePictures).forEach(([userType, dataUrl]) => {
+        if (dataUrl && getDataUrlSize(dataUrl) > MAX_IMAGE_SIZE_MB) {
+          content.profilePictures[userType] = null;
         }
-      }
+      });
     }
-    
-    // Clean up oversized custom images (over 1MB)
+
+    // Clean up oversized custom images
     if (content.customImages) {
-      for (const [imageKey, image] of Object.entries(content.customImages)) {
-        if (image && image.length > 1000000) {
-          console.log(`Cleaning up oversized custom image: ${imageKey}`);
-          delete content.customImages[imageKey as keyof typeof content.customImages];
+      Object.entries(content.customImages).forEach(([imageKey, dataUrl]) => {
+        if (dataUrl && getDataUrlSize(dataUrl) > MAX_IMAGE_SIZE_MB) {
+          content.customImages[imageKey] = null;
         }
-      }
+      });
     }
-    
-    // Clean up oversized custom music (over 2MB)
-    if (content.customMusic && content.customMusic.length > 2000000) {
-      console.log('Cleaning up oversized custom music');
-      content.customMusic = '';
+
+    // Clean up oversized custom music
+    if (content.customMusic && getDataUrlSize(content.customMusic) > MAX_MUSIC_SIZE_MB) {
+      content.customMusic = null;
     }
     
     // Save cleaned content
@@ -361,37 +358,29 @@ export const saveContentWithCompression = async (content: WebsiteContent): Promi
     
     // Check current storage size
     const currentSize = getStorageSizeMB();
-    console.log(`Current storage size: ${currentSize.toFixed(2)} MB`);
     
     // If storage is getting full, compress large items
-    if (currentSize > 4) { // 4MB threshold
-      console.log('Storage getting full, compressing large items...');
-      
-      // Compress profile pictures
-      if (content.profilePictures) {
-        for (const [userType, picture] of Object.entries(content.profilePictures)) {
-          if (picture && picture.length > 300000) {
-            content.profilePictures[userType as keyof typeof content.profilePictures] = 
-              await compressImage(picture, 300000);
-          }
-        }
-      }
-      
-      // Compress custom images
+    if (currentSize > STORAGE_WARNING_THRESHOLD_MB) {
+      // Compress large images and music
       if (content.customImages) {
-        for (const [imageKey, image] of Object.entries(content.customImages)) {
-          if (image && image.length > 500000) {
-            content.customImages[imageKey as keyof typeof content.customImages] = 
-              await compressImage(image, 500000);
+        Object.entries(content.customImages).forEach(([key, dataUrl]) => {
+          if (dataUrl && getDataUrlSize(dataUrl) > MAX_IMAGE_SIZE_MB) {
+            content.customImages[key] = compressImage(dataUrl, MAX_IMAGE_SIZE_MB);
           }
-        }
+        });
       }
+      
+      if (content.customMusic && getDataUrlSize(content.customMusic) > MAX_MUSIC_SIZE_MB) {
+        content.customMusic = compressAudio(content.customMusic, MAX_MUSIC_SIZE_MB);
+      }
+      
+      // Save compressed content
+      localStorage.setItem('websiteContent', JSON.stringify(content));
     }
     
     // Save the content (both localStorage and Firebase)
     saveContent(content);
     
-    console.log(`Final storage size: ${getStorageSizeMB().toFixed(2)} MB`);
   } catch (error) {
     console.error('Error saving content with compression:', error);
     // Fallback to regular save
@@ -403,35 +392,38 @@ export const saveContentWithCompression = async (content: WebsiteContent): Promi
 export const syncContentFromFirebase = async (): Promise<WebsiteContent | null> => {
   try {
     if (!isFirebaseAvailable()) {
-      console.log('Firebase not available, skipping sync');
       return null;
     }
-    
-    const firebaseContent = await getContentFromFirebase();
-    if (firebaseContent) {
-      // Update localStorage with Firebase content
-      localStorage.setItem('websiteContent', JSON.stringify(firebaseContent));
-      console.log('✅ Content synced from Firebase');
-      return firebaseContent;
+
+    const docRef = doc(db, 'websiteContent', 'main');
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      return docSnap.data() as WebsiteContent;
+    } else {
+      return null;
     }
-    
-    return null;
   } catch (error) {
-    console.error('❌ Error syncing content from Firebase:', error);
+    console.error('Error syncing content from Firebase:', error);
     return null;
   }
 };
 
 // Function to subscribe to Firebase updates
-export const subscribeToFirebaseUpdates = (
-  callback: (content: WebsiteContent | null) => void
-): (() => void) => {
+export const subscribeToFirebaseUpdates = (callback: (content: WebsiteContent | null) => void) => {
   if (!isFirebaseAvailable()) {
-    console.log('Firebase not available, cannot subscribe to updates');
-    return () => {}; // Return empty function
+    return () => {};
   }
-  
-  return subscribeToContentUpdates(callback);
+
+  const docRef = doc(db, 'websiteContent', 'main');
+  return onSnapshot(docRef, (doc) => {
+    if (doc.exists()) {
+      const content = doc.data() as WebsiteContent;
+      callback(content);
+    } else {
+      callback(null);
+    }
+  });
 };
 
 // Re-export isFirebaseAvailable from Firebase service
