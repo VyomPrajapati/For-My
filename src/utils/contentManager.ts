@@ -33,6 +33,14 @@ export interface WebsiteContent {
   // Game completion message
   gameMessage: string;
   
+  // Quiz questions
+  quizQuestions: Array<{
+    question: string;
+    option1: string;
+    option2: string;
+    correctAnswer: 1 | 2;
+  }>;
+  
   // Custom music
   customMusic?: string;
   
@@ -81,6 +89,9 @@ export const defaultContent: WebsiteContent = {
   
   // Game completion message - blank for customization
   gameMessage: "",
+  
+  // Quiz questions - blank for customization
+  quizQuestions: [],
   
   // Custom music - empty by default
   customMusic: "",

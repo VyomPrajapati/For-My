@@ -536,6 +536,152 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                 </div>
               </div>
 
+              {/* Quiz Questions Section */}
+              <div className="bg-purple-50 p-4 rounded-lg border-l-4 border-purple-400">
+                <h3 className="text-lg font-semibold text-purple-800 mb-3 flex items-center gap-2">
+                  🧠 Quiz Questions
+                </h3>
+                <p className="text-sm text-purple-600 mb-4">
+                  Add quiz questions for your friend to answer. Each correct answer earns 1 heart!
+                </p>
+                
+                <div className="space-y-4">
+                  {content.quizQuestions.map((question, index) => (
+                    <div key={index} className="bg-white p-4 rounded-lg border border-purple-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium text-purple-700">Question {index + 1}</h4>
+                        <button
+                          onClick={() => {
+                            const newQuestions = content.quizQuestions.filter((_, i) => i !== index);
+                            setContent({ ...content, quizQuestions: newQuestions });
+                          }}
+                          className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-purple-700 mb-1">
+                            Question
+                          </label>
+                          <input
+                            type="text"
+                            value={question.question}
+                            onChange={(e) => {
+                              const newQuestions = [...content.quizQuestions];
+                              newQuestions[index] = { ...question, question: e.target.value };
+                              setContent({ ...content, quizQuestions: newQuestions });
+                            }}
+                            className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            placeholder="Enter your question..."
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-sm font-medium text-purple-700 mb-1">
+                              Option 1
+                            </label>
+                            <input
+                              type="text"
+                              value={question.option1}
+                              onChange={(e) => {
+                                const newQuestions = [...content.quizQuestions];
+                                newQuestions[index] = { ...question, option1: e.target.value };
+                                setContent({ ...content, quizQuestions: newQuestions });
+                              }}
+                              className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              placeholder="First option..."
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-purple-700 mb-1">
+                              Option 2
+                            </label>
+                            <input
+                              type="text"
+                              value={question.option2}
+                              onChange={(e) => {
+                                const newQuestions = [...content.quizQuestions];
+                                newQuestions[index] = { ...question, option2: e.target.value };
+                                setContent({ ...content, quizQuestions: newQuestions });
+                              }}
+                              className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              placeholder="Second option..."
+                            />
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-purple-700 mb-1">
+                            Correct Answer
+                          </label>
+                          <div className="flex space-x-4">
+                            <label className="flex items-center">
+                              <input
+                                type="radio"
+                                name={`correct-${index}`}
+                                value={1}
+                                checked={question.correctAnswer === 1}
+                                onChange={() => {
+                                  const newQuestions = [...content.quizQuestions];
+                                  newQuestions[index] = { ...question, correctAnswer: 1 };
+                                  setContent({ ...content, quizQuestions: newQuestions });
+                                }}
+                                className="mr-2 text-purple-600 focus:ring-purple-500"
+                              />
+                              Option 1
+                            </label>
+                            <label className="flex items-center">
+                              <input
+                                type="radio"
+                                name={`correct-${index}`}
+                                value={2}
+                                checked={question.correctAnswer === 2}
+                                onChange={() => {
+                                  const newQuestions = [...content.quizQuestions];
+                                  newQuestions[index] = { ...question, correctAnswer: 2 };
+                                  setContent({ ...content, quizQuestions: newQuestions });
+                                }}
+                                className="mr-2 text-purple-600 focus:ring-purple-500"
+                              />
+                              Option 2
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  <button
+                    onClick={() => setContent({
+                      ...content,
+                      quizQuestions: [...content.quizQuestions, {
+                        question: '',
+                        option1: '',
+                        option2: '',
+                        correctAnswer: 1
+                      }]
+                    })}
+                    className="w-full py-3 border-2 border-dashed border-purple-300 rounded-lg text-purple-500 hover:border-purple-500 hover:text-purple-600 transition-colors font-medium"
+                  >
+                    + Add Quiz Question
+                  </button>
+                  
+                  {content.quizQuestions.length > 0 && (
+                    <div className="bg-purple-100 p-3 rounded-lg">
+                      <p className="text-sm text-purple-700 text-center">
+                        💡 Total questions: {content.quizQuestions.length} | 
+                        Maximum hearts possible: {content.quizQuestions.length}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Music Customization Section */}
               <div className="bg-yellow-50 p-4 rounded-lg border-l-4 border-yellow-400">
                 <h3 className="text-lg font-semibold text-yellow-800 mb-3 flex items-center gap-2">
