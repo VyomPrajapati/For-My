@@ -7,7 +7,7 @@ export const AUTH_CONFIG = {
   },
   USER: {
     username: 'boondi ka laddu',
-    password: 'Loml131803',
+    password: 'adrilovesyou06',
     role: 'user'
   }
 };
