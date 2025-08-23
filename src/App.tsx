@@ -623,7 +623,7 @@ function App() {
                 </p>
               </div>
             )}
-            {quizCompleted && (
+            {quizCompleted && safeWebsiteContent.quizQuestions && safeWebsiteContent.quizQuestions.length > 0 && (
               <div className="mt-3 bg-green-50 p-2 rounded-lg border border-green-200">
                 <p className="text-green-600 font-comic text-xs md:text-sm">
                   Quiz completed! 🎉 Try again to improve your score!

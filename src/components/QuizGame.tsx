@@ -35,13 +35,10 @@ const QuizGame: React.FC<QuizGameProps> = ({ onComplete, onClose, questions, res
     setGameCompleted(false);
   }, [resetKey]);
 
-  // If no questions, show message and close
+  // If no questions, just show the message - don't call onComplete
   useEffect(() => {
-    if (questions.length === 0) {
-      setTimeout(() => {
-        onComplete(0);
-      }, 2000);
-    }
+    // Don't call onComplete when there are no questions
+    // This prevents the parent from thinking the quiz was completed
   }, [questions, onComplete]);
 
   const handleAnswerSelect = (answer: number) => {
