@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Play, Pause, Volume2, VolumeX, Settings } from 'lucide-react';
 import HeartCatcherGame from './components/HeartCatcherGame';
@@ -204,6 +204,23 @@ function App() {
   const [isKaleshiAuratUser, setIsKaleshiAuratUser] = useState<boolean>(isKaleshiAurat());
   const [currentUser, setCurrentUser] = useState<any>(getCurrentUser());
 
+  // Key to force re-render when login status changes
+  const appKey = `app-${isLoggedIn ? 'logged-in' : 'logged-out'}`;
+
+  // Ref to track if we've just logged in
+  const justLoggedInRef = useRef(false);
+
+  // Function to completely reset envelope state
+  const resetEnvelopeState = useCallback(() => {
+    setInitialLetterOpened(false);
+    setShowContent(false);
+    setShowLetter(false);
+    // Clear any localStorage that might be persisting envelope state
+    localStorage.removeItem('initialLetterOpened');
+    localStorage.removeItem('showContent');
+    localStorage.removeItem('showLetter');
+  }, []);
+
   // Helper function to get custom images synchronously from local state
   const getCustomImageSync = (imageKey: string): string | null => {
     return websiteContent.customImages?.[imageKey as keyof typeof websiteContent.customImages] || null;
@@ -215,16 +232,26 @@ function App() {
       const timer = setTimeout(() => setShowContent(true), 2000);
       return () => clearTimeout(timer);
     }
-  }, [initialLetterOpened, showContent]);
+  }, [initialLetterOpened]); // Remove showContent dependency to avoid loops
+
+
 
   // Reset envelope state when user logs in to ensure animation plays
   useEffect(() => {
-    if (isLoggedIn && !initialLetterOpened) {
-      // If user just logged in, reset to show envelope first
+    if (isLoggedIn && justLoggedInRef.current) {
+      // Only reset when we've just logged in, not on every isLoggedIn change
+      resetEnvelopeState();
+    }
+  }, [isLoggedIn, resetEnvelopeState]);
+
+  // Cleanup effect to ensure proper state management
+  useEffect(() => {
+    return () => {
+      // Cleanup when component unmounts
       setInitialLetterOpened(false);
       setShowContent(false);
-    }
-  }, [isLoggedIn, initialLetterOpened]);
+    };
+  }, []);
 
   useEffect(() => {
     setIsLoggedIn(isAuthenticated());
@@ -412,6 +439,18 @@ function App() {
             setIsLoggedIn(true);
             setIsKaleshiAuratUser(isKaleshiAurat());
             setCurrentUser(getCurrentUser());
+            // Mark that we just logged in
+            justLoggedInRef.current = true;
+            // Reset envelope state to ensure it shows after login
+            resetEnvelopeState();
+            // Also reset after a small delay to ensure it takes effect
+            setTimeout(() => {
+              resetEnvelopeState();
+              // Reset the ref after a delay
+              setTimeout(() => {
+                justLoggedInRef.current = false;
+              }, 500);
+            }, 100);
           }}
         />
       </div>
@@ -439,6 +478,8 @@ function App() {
       envelopeImage={getCustomImageSync('envelope') || EnvelopeGif}
     />;
   }
+
+
 
   // If envelope is opened but content is not showing yet, show a loading state
   if (initialLetterOpened && !showContent) {
