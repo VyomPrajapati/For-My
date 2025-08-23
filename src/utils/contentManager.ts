@@ -1,4 +1,28 @@
 import { saveContentToFirebase, getContentFromFirebase, subscribeToContentUpdates, isFirebaseAvailable } from '../firebase/contentService';
+import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase/config';
+
+// Constants for storage management
+const MAX_IMAGE_SIZE_MB = 0.5; // 500KB
+const MAX_MUSIC_SIZE_MB = 2.0; // 2MB
+const STORAGE_WARNING_THRESHOLD_MB = 4.0; // 4MB
+
+// Helper function to get data URL size in MB
+const getDataUrlSize = (dataUrl: string): number => {
+  if (!dataUrl) return 0;
+  // Remove data URL prefix to get base64 length
+  const base64 = dataUrl.split(',')[1];
+  if (!base64) return 0;
+  // Calculate size: base64 length * 0.75 (base64 is ~75% of original size)
+  return (base64.length * 0.75) / (1024 * 1024);
+};
+
+// Helper function to compress audio (placeholder)
+const compressAudio = (audioData: string, maxSizeMB: number): string => {
+  // For now, just return the original data
+  // In a real implementation, you'd compress the audio
+  return audioData;
+};
 
 export interface WebsiteContent {
   // Header
@@ -167,6 +191,20 @@ export const getCustomImage = async (imageKey: string): Promise<string | null> =
     console.error('Error loading custom image:', error);
     return null;
   }
+};
+
+// Get custom image synchronously (for use in components)
+export const getCustomImageSync = (imageKey: string): string | null => {
+  try {
+    const saved = localStorage.getItem('websiteContent');
+    if (saved) {
+      const content = JSON.parse(saved) as WebsiteContent;
+      return content.customImages?.[imageKey as keyof typeof content.customImages] || null;
+    }
+  } catch (error) {
+    console.error('Error getting custom image synchronously:', error);
+  }
+  return null;
 };
 
 export const resetContent = (): WebsiteContent => {
