@@ -1,8 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Play, Pause, Volume2, VolumeX, Settings } from 'lucide-react';
-import HeartCatcherGame from './components/HeartCatcherGame';
 import QuizGame from './components/QuizGame';
+import MemoryCardGame from './components/MemoryCardGame';
+import LoveSongPuzzle from './components/LoveSongPuzzle';
+import FlowerGarden from './components/FlowerGarden';
+import CatchTheKitty from './components/CatchTheKitty';
+import AchievementSystem from './components/AchievementSystem';
+import GameCelebration from './components/GameCelebration';
 import ScrollReveal from './components/ScrollReveal';
 import CustomizationPanel from './components/CustomizationPanel';
 import LoginModal from './components/LoginModal';
@@ -193,8 +198,20 @@ function App() {
   const [showContent, setShowContent] = useState<boolean>(false);
   const [initialLetterOpened, setInitialLetterOpened] = useState<boolean>(false);
   const [hearts, setHearts] = useState<Heart[]>([]);
-  const [showGame, setShowGame] = useState<boolean>(false);
-  const [gameCompleted, setGameCompleted] = useState<boolean>(false);
+  const [showMemoryCardGame, setShowMemoryCardGame] = useState<boolean>(false);
+  const [memoryCardCompleted, setMemoryCardCompleted] = useState<boolean>(false);
+  const [showLoveSongGame, setShowLoveSongGame] = useState<boolean>(false);
+  const [loveSongCompleted, setLoveSongCompleted] = useState<boolean>(false);
+  const [showFlowerGarden, setShowFlowerGarden] = useState<boolean>(false);
+  const [flowerGardenCompleted, setFlowerGardenCompleted] = useState<boolean>(false);
+  const [showCatchTheKitty, setShowCatchTheKitty] = useState<boolean>(false);
+  const [catchTheKittyCompleted, setCatchTheKittyCompleted] = useState<boolean>(false);
+  const [showAchievementSystem, setShowAchievementSystem] = useState<boolean>(false);
+  
+  // Celebration states
+  const [showCelebration, setShowCelebration] = useState<boolean>(false);
+  const [celebrationMessage, setCelebrationMessage] = useState<string>('');
+  
   const [showQuizGame, setShowQuizGame] = useState<boolean>(false);
   const [quizCompleted, setQuizCompleted] = useState<boolean>(false);
   const [quizResetKey, setQuizResetKey] = useState<number>(0);
@@ -225,6 +242,65 @@ function App() {
   const getCustomImageSync = (imageKey: string): string | null => {
     return websiteContent.customImages?.[imageKey as keyof typeof websiteContent.customImages] || null;
   };
+
+  // Function to show celebration with customizable message
+  const showGameCelebration = (gameType: 'memoryCard' | 'loveSong' | 'flowerGarden' | 'catchTheKitty' | 'quiz') => {
+    const message = websiteContent.gameCustomization?.[`${gameType}Game` as keyof typeof websiteContent.gameCustomization]?.celebrationMessage || 
+      `🎉 Congratulations! You've completed the ${gameType} game! 💕`;
+    
+    setCelebrationMessage(message);
+    setShowCelebration(true);
+  };
+
+  // Function to update game stats and save to content
+  const updateGameStats = useCallback((gameType: 'memoryCard' | 'loveSong' | 'flowerGarden' | 'catchTheKitty' | 'quiz', completed: boolean) => {
+    const updatedContent = { ...websiteContent };
+    
+    // Initialize gameStats if it doesn't exist
+    if (!updatedContent.gameStats) {
+      updatedContent.gameStats = {
+        memoryCardCompleted: false,
+        loveSongCompleted: false,
+        flowerGardenCompleted: false,
+        catchTheKittyCompleted: false,
+        quizCompleted: false,
+        gamesPlayed: 0,
+        daysActive: 1,
+        totalHearts: 0
+      };
+    }
+    
+    // Update the specific game completion status
+    switch (gameType) {
+      case 'memoryCard':
+        updatedContent.gameStats.memoryCardCompleted = completed;
+        break;
+      case 'loveSong':
+        updatedContent.gameStats.loveSongCompleted = completed;
+        break;
+      case 'flowerGarden':
+        updatedContent.gameStats.flowerGardenCompleted = completed;
+        break;
+      case 'catchTheKitty':
+        updatedContent.gameStats.catchTheKittyCompleted = completed;
+        break;
+      case 'quiz':
+        updatedContent.gameStats.quizCompleted = completed;
+        break;
+    }
+    
+    // Update gamesPlayed count
+    updatedContent.gameStats.gamesPlayed = [
+      updatedContent.gameStats.memoryCardCompleted,
+      updatedContent.gameStats.loveSongCompleted,
+      updatedContent.gameStats.flowerGardenCompleted,
+      updatedContent.gameStats.quizCompleted
+    ].filter(Boolean).length;
+    
+    // Save updated content
+    setWebsiteContent(updatedContent);
+    saveContent(updatedContent);
+  }, [websiteContent]);
 
   useEffect(() => {
     if (initialLetterOpened && !showContent) {
@@ -302,6 +378,16 @@ function App() {
       return unsubscribe;
     }
   }, [isLoggedIn]);
+
+  // Sync game completion states with loaded content
+  useEffect(() => {
+    if (websiteContent.gameStats) {
+      setMemoryCardCompleted(websiteContent.gameStats.memoryCardCompleted || false);
+      setLoveSongCompleted(websiteContent.gameStats.loveSongCompleted || false);
+      setFlowerGardenCompleted(websiteContent.gameStats.flowerGardenCompleted || false);
+      setQuizCompleted(websiteContent.gameStats.quizCompleted || false);
+    }
+  }, [websiteContent.gameStats]);
 
   useEffect(() => {
     // Ensure audio element exists
@@ -602,32 +688,133 @@ function App() {
           </motion.div>
         </ScrollReveal>
 
-        {/* Game Card */}
+        {/* Memory Card Game */}
         <ScrollReveal animation="slide" duration={0.7} delay={0.3}>
           <motion.div
             className="comic-panel bg-white p-4 md:p-6 text-center rounded-lg shadow-lg hover:scale-105 transition-transform cursor-pointer"
             whileHover={{ rotate: [-1, 1, -1, 0] }}
-            onClick={(e: React.MouseEvent) => { e.stopPropagation(); setShowGame(true); }}
+            onClick={(e: React.MouseEvent) => { e.stopPropagation(); setShowMemoryCardGame(true); }}
           >
             <div className="bg-pink-100 w-12 h-12 md:w-16 md:h-16 mx-auto rounded-full flex items-center justify-center mb-3">
-              <Heart className="w-6 h-6 md:w-8 md:w-8 text-pink-600" fill="currentColor" />
+              <div className="w-6 h-6 md:w-8 md:h-8 text-pink-600 flex items-center justify-center">
+                🃏
+              </div>
             </div>
-            <h2 className="text-lg md:text-xl font-bold text-pink-600 font-comic">Play a Game!</h2>
+            <h2 className="text-lg md:text-xl font-bold text-pink-600 font-comic">Memory Card Game!</h2>
             <p className="text-sm md:text-base text-gray-600 font-comic mt-2">
-              Catch some hearts to unlock a special message
+              Match romantic pairs to earn hearts
             </p>
-            {gameCompleted && (
+            {memoryCardCompleted && (
               <div className="mt-3 bg-pink-50 p-2 rounded-lg border border-pink-200">
                 <p className="text-pink-600 font-comic text-xs md:text-sm">
-                  You've completed the game! ✨ But you can play again if you want!
+                  Memory game completed! ✨ Play again to improve your score!
                 </p>
               </div>
             )}
           </motion.div>
         </ScrollReveal>
 
-        {/* Quiz Game Card */}
+        {/* Love Song Puzzle Game */}
+        <ScrollReveal animation="slide" duration={0.7} delay={0.35}>
+          <motion.div
+            className="comic-panel bg-white p-4 md:p-6 text-center rounded-lg shadow-lg hover:scale-105 transition-transform cursor-pointer"
+            whileHover={{ rotate: [-1, 1, -1, 0] }}
+            onClick={(e: React.MouseEvent) => { e.stopPropagation(); setShowLoveSongGame(true); }}
+          >
+            <div className="bg-purple-100 w-12 h-12 md:w-16 md:h-16 mx-auto rounded-full flex items-center justify-center mb-3">
+              <div className="w-6 h-6 md:w-8 md:h-8 text-purple-600 flex items-center justify-center">
+                🎵
+              </div>
+            </div>
+            <h2 className="text-lg md:text-xl font-bold text-purple-600 font-comic">Love Song Puzzle!</h2>
+            <p className="text-sm md:text-base text-gray-600 font-comic mt-2">
+              Arrange musical notes to complete love songs
+            </p>
+            {loveSongCompleted && (
+              <div className="mt-3 bg-purple-50 p-2 rounded-lg border border-purple-200">
+                <p className="text-purple-600 font-comic text-xs md:text-sm">
+                  Song puzzle completed! 🎉 Try again to improve your score!
+                </p>
+              </div>
+            )}
+          </motion.div>
+        </ScrollReveal>
+
+        {/* Flower Garden Game */}
         <ScrollReveal animation="slide" duration={0.7} delay={0.4}>
+          <motion.div
+            className="comic-panel bg-white p-4 md:p-6 text-center rounded-lg shadow-lg hover:scale-105 transition-transform cursor-pointer"
+            whileHover={{ rotate: [-1, 1, -1, 0] }}
+            onClick={(e: React.MouseEvent) => { e.stopPropagation(); setShowFlowerGarden(true); }}
+          >
+            <div className="bg-green-100 w-12 h-12 md:w-16 md:h-16 mx-auto rounded-full flex items-center justify-center mb-3">
+              <div className="w-6 h-6 md:w-8 md:h-8 text-green-600 flex items-center justify-center">
+                🌺
+              </div>
+            </div>
+            <h2 className="text-lg md:text-xl font-bold text-green-600 font-comic">Flower Garden!</h2>
+            <p className="text-sm md:text-base text-gray-600 font-comic mt-2">
+              Plant, grow, and harvest flowers for hearts
+            </p>
+            {flowerGardenCompleted && (
+              <div className="mt-3 bg-green-50 p-2 rounded-lg border border-green-200">
+                <p className="text-green-600 font-comic text-xs md:text-sm">
+                  Garden completed! 🌸 Plant more flowers to earn more hearts!
+                </p>
+              </div>
+            )}
+          </motion.div>
+        </ScrollReveal>
+
+        {/* Catch the Kitty Game */}
+        <ScrollReveal animation="slide" duration={0.7} delay={0.42}>
+          <motion.div
+            className="comic-panel bg-white p-4 md:p-6 text-center rounded-lg shadow-lg hover:scale-105 transition-transform cursor-pointer"
+            whileHover={{ rotate: [-1, 1, -1, 0] }}
+            onClick={(e: React.MouseEvent) => { e.stopPropagation(); setShowCatchTheKitty(true); }}
+          >
+            <div className="bg-orange-100 w-12 h-12 md:w-16 md:h-16 mx-auto rounded-full flex items-center justify-center mb-3">
+              <div className="w-6 h-6 md:w-8 md:h-8 text-orange-600 flex items-center justify-center">
+                🐱
+              </div>
+            </div>
+            <h2 className="text-lg md:text-xl font-bold text-orange-600 font-comic">
+              {safeWebsiteContent.gameCustomization?.catchTheKittyGame?.title || "Catch the Kitty!"}
+            </h2>
+            <p className="text-sm md:text-base text-gray-600 font-comic mt-2">
+              {safeWebsiteContent.gameCustomization?.catchTheKittyGame?.description || "Catch falling kitties in your basket to earn hearts"}
+            </p>
+            {catchTheKittyCompleted && (
+              <div className="mt-3 bg-orange-50 p-2 rounded-lg border border-orange-200">
+                <p className="text-orange-600 font-comic text-xs md:text-sm">
+                  All kitties caught! 🎉 Play again to improve your score!
+                </p>
+              </div>
+            )}
+          </motion.div>
+        </ScrollReveal>
+
+        {/* Achievement System */}
+        <ScrollReveal animation="slide" duration={0.7} delay={0.45}>
+          <motion.div
+            className="comic-panel bg-white p-4 md:p-6 text-center rounded-lg shadow-lg hover:scale-105 transition-transform cursor-pointer"
+            whileHover={{ rotate: [-1, 1, -1, 0] }}
+            onClick={(e: React.MouseEvent) => { e.stopPropagation(); setShowAchievementSystem(true); }}
+          >
+            <div className="bg-yellow-100 w-12 h-12 md:w-16 md:h-16 mx-auto rounded-full flex items-center justify-center mb-3">
+              <div className="w-6 h-6 md:w-8 md:h-8 text-yellow-600 flex items-center justify-center">
+                🏆
+              </div>
+            </div>
+            <h2 className="text-lg md:text-xl font-bold text-yellow-600 font-comic">Achievements!</h2>
+            <p className="text-sm md:text-base text-gray-600 font-comic mt-2">
+              Complete challenges and unlock rewards
+            </p>
+          </motion.div>
+        </ScrollReveal>
+
+        {/* Quiz Game Card */}
+        <ScrollReveal animation="slide" duration={0.7} delay={0.5}>
           <motion.div
             className="comic-panel bg-white p-4 md:p-6 text-center rounded-lg shadow-lg hover:scale-105 transition-transform cursor-pointer"
             whileHover={{ rotate: [-1, 1, -1, 0] }}
@@ -764,12 +951,150 @@ function App() {
         </div>
       )}
 
-      {/* Game Modal */}
-      {showGame && (
-        <HeartCatcherGame 
-          onComplete={() => setGameCompleted(true)} 
-          onClose={() => setShowGame(false)} 
-          gameMessage={safeWebsiteContent.gameMessage}
+      {/* Memory Card Game Modal */}
+      {showMemoryCardGame && (
+        <MemoryCardGame 
+          customImages={safeWebsiteContent.gameCustomization?.memoryCardGame?.customImages || []}
+          onComplete={(hearts) => {
+            setMemoryCardCompleted(true);
+            updateGameStats('memoryCard', true);
+            // Add floating hearts
+            for (let i = 0; i < Math.min(hearts, 10); i++) {
+              setTimeout(() => {
+                const randomX = Math.random() * window.innerWidth;
+                const randomY = Math.random() * window.innerHeight;
+                const newHeart: Heart = { 
+                  id: Date.now() + i, 
+                  x: randomX, 
+                  y: randomY 
+                };
+                setHearts(prev => [...prev, newHeart]);
+                setTimeout(() => setHearts((hs) => hs.filter((h) => h.id !== newHeart.id)), 2000);
+              }, i * 200);
+            }
+            // Show celebration
+            showGameCelebration('memoryCard');
+          }} 
+          onClose={() => setShowMemoryCardGame(false)} 
+        />
+      )}
+
+      {/* Love Song Puzzle Game Modal */}
+      {showLoveSongGame && (
+        <LoveSongPuzzle 
+          onComplete={(hearts) => {
+            setLoveSongCompleted(true);
+            updateGameStats('loveSong', true);
+            // Add floating hearts
+            for (let i = 0; i < Math.min(hearts, 10); i++) {
+              setTimeout(() => {
+                const randomX = Math.random() * window.innerWidth;
+                const randomY = Math.random() * window.innerHeight;
+                const newHeart: Heart = { 
+                  id: Date.now() + i, 
+                  x: randomX, 
+                  y: randomY 
+                };
+                setHearts(prev => [...prev, newHeart]);
+                setTimeout(() => setHearts((hs) => hs.filter((h) => h.id !== newHeart.id)), 2000);
+              }, i * 200);
+            }
+            // Show celebration
+            showGameCelebration('loveSong');
+          }} 
+          onClose={() => setShowLoveSongGame(false)} 
+        />
+      )}
+
+      {/* Flower Garden Game Modal */}
+      {showFlowerGarden && (
+        <FlowerGarden 
+          onComplete={(hearts) => {
+            setFlowerGardenCompleted(true);
+            // Add floating hearts
+            for (let i = 0; i < Math.min(hearts, 10); i++) {
+              setTimeout(() => {
+                const randomX = Math.random() * window.innerWidth;
+                const randomY = Math.random() * window.innerHeight;
+                const newHeart: Heart = { 
+                  id: Date.now() + i, 
+                  x: randomX, 
+                  y: randomY 
+                };
+                setHearts(prev => [...prev, newHeart]);
+                setTimeout(() => setHearts((hs) => hs.filter((h) => h.id !== newHeart.id)), 2000);
+              }, i * 200);
+            }
+            // Show celebration
+            showGameCelebration('flowerGarden');
+          }} 
+          onClose={() => setShowFlowerGarden(false)} 
+        />
+      )}
+
+      {/* Catch the Kitty Game Modal */}
+      {showCatchTheKitty && (
+        <CatchTheKitty 
+          onComplete={(hearts) => {
+            setCatchTheKittyCompleted(true);
+            updateGameStats('catchTheKitty', true);
+            // Add floating hearts
+            for (let i = 0; i < Math.min(hearts, 10); i++) {
+              setTimeout(() => {
+                const randomX = Math.random() * window.innerWidth;
+                const randomY = Math.random() * window.innerHeight;
+                const newHeart: Heart = { 
+                  id: Date.now() + i, 
+                  x: randomX, 
+                  y: randomY 
+                };
+                setHearts(prev => [...prev, newHeart]);
+                setTimeout(() => setHearts((hs) => hs.filter((h) => h.id !== newHeart.id)), 2000);
+              }, i * 200);
+            }
+            // Show celebration
+            showGameCelebration('catchTheKitty');
+          }} 
+          onClose={() => setShowCatchTheKitty(false)} 
+          customImages={safeWebsiteContent.gameCustomization?.catchTheKittyGame?.customImages || []}
+          title={safeWebsiteContent.gameCustomization?.catchTheKittyGame?.title}
+          description={safeWebsiteContent.gameCustomization?.catchTheKittyGame?.description}
+          heartsReward={safeWebsiteContent.gameCustomization?.catchTheKittyGame?.heartsReward}
+          celebrationMessage={safeWebsiteContent.gameCustomization?.catchTheKittyGame?.celebrationMessage}
+          numberOfKitties={safeWebsiteContent.gameCustomization?.catchTheKittyGame?.numberOfKitties}
+          fallSpeed={safeWebsiteContent.gameCustomization?.catchTheKittyGame?.fallSpeed}
+        />
+      )}
+
+      {/* Achievement System Modal */}
+      {showAchievementSystem && (
+        <AchievementSystem 
+          onClose={() => setShowAchievementSystem(false)}
+          onHeartsEarned={(hearts) => {
+            // Add floating hearts for achievements
+            for (let i = 0; i < Math.min(hearts, 10); i++) {
+              setTimeout(() => {
+                const randomX = Math.random() * window.innerWidth;
+                const randomY = Math.random() * window.innerHeight;
+                const newHeart: Heart = { 
+                  id: Date.now() + i, 
+                  x: randomX, 
+                  y: randomY 
+                };
+                setHearts(prev => [...prev, newHeart]);
+                setTimeout(() => setHearts((hs) => hs.filter((h) => h.id !== newHeart.id)), 2000);
+              }, i * 200);
+            }
+          }}
+          gameStats={{
+            quizCompleted,
+            memoryCardCompleted,
+            loveSongCompleted,
+            flowerGardenCompleted,
+            totalHearts: 0, // This will be calculated based on game completions
+            gamesPlayed: [quizCompleted, memoryCardCompleted, loveSongCompleted, flowerGardenCompleted].filter(Boolean).length,
+            daysActive: 1 // This could be enhanced with localStorage tracking
+          }}
         />
       )}
 
@@ -780,6 +1105,7 @@ function App() {
           resetKey={quizResetKey} // Pass resetKey to force state reset
           onComplete={(heartsEarned) => {
             setQuizCompleted(true);
+            updateGameStats('quiz', true);
             // Add floating hearts for each correct answer
             for (let i = 0; i < heartsEarned; i++) {
               setTimeout(() => {
@@ -794,6 +1120,8 @@ function App() {
                 setTimeout(() => setHearts((hs) => hs.filter((h) => h.id !== newHeart.id)), 2000);
               }, i * 200);
             }
+            // Show celebration
+            showGameCelebration('quiz');
           }} 
           onClose={() => {
             setShowQuizGame(false);
@@ -810,8 +1138,32 @@ function App() {
           onClose={() => setShowCustomization(false)}
           currentContent={safeWebsiteContent}
           onContentUpdate={handleContentUpdate}
+          onGameReset={(gameType) => {
+            // Update local state when games are reset in admin panel
+            switch (gameType) {
+              case 'memoryCard':
+                setMemoryCardCompleted(false);
+                break;
+              case 'loveSong':
+                setLoveSongCompleted(false);
+                break;
+              case 'flowerGarden':
+                setFlowerGardenCompleted(false);
+                break;
+              case 'quiz':
+                setQuizCompleted(false);
+                break;
+            }
+          }}
         />
       )}
+
+      {/* Game Celebration Modal */}
+      <GameCelebration
+        isVisible={showCelebration}
+        message={celebrationMessage}
+        onClose={() => setShowCelebration(false)}
+      />
 
       {/* User Info */}
       <UserInfo

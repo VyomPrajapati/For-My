@@ -3,7 +3,7 @@ import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 // Constants for storage management
-const MAX_IMAGE_SIZE_MB = 0.5; // 500KB
+const MAX_IMAGE_SIZE_MB = 0.2; // 200KB - More reasonable size
 const MAX_MUSIC_SIZE_MB = 2.0; // 2MB
 const STORAGE_WARNING_THRESHOLD_MB = 4.0; // 4MB
 
@@ -79,6 +79,99 @@ export interface WebsiteContent {
     kaleshiAurat?: string;
     user?: string;
   };
+  
+  // Game Stats (for tracking completion and achievements)
+  gameStats?: {
+    memoryCardCompleted: boolean;
+    loveSongCompleted: boolean;
+    flowerGardenCompleted: boolean;
+    catchTheKittyCompleted: boolean;
+    quizCompleted: boolean;
+    gamesPlayed: number;
+    daysActive: number;
+    totalHearts: number;
+  };
+  
+  // Game Customization
+  gameCustomization: {
+    // Memory Card Game
+    memoryCardGame: {
+      title: string;
+      description: string;
+      emojis: string[];
+      heartsReward: number;
+      celebrationMessage: string;
+      customImages: string[]; // Array of 6 custom images for 6 pairs
+    };
+    
+    // Love Song Puzzle Game
+    loveSongPuzzleGame: {
+      title: string;
+      description: string;
+      songs: Array<{
+        title: string;
+        artist: string;
+        notes: string[];
+        difficulty: 'easy' | 'medium' | 'hard';
+        heartsReward: number;
+      }>;
+      celebrationMessage: string;
+    };
+    
+    // Flower Garden Game
+    flowerGardenGame: {
+      title: string;
+      description: string;
+      flowerTypes: Array<{
+        type: string;
+        emoji: string;
+        daysToGrow: number;
+        heartsReward: number;
+        rarity: 'common' | 'medium' | 'rare' | 'special';
+      }>;
+      waterLevel: number;
+      gridSize: number;
+      celebrationMessage: string;
+    };
+    
+    // Catch the Kitty Game
+    catchTheKittyGame: {
+      title: string;
+      description: string;
+      heartsReward: number;
+      celebrationMessage: string;
+      numberOfKitties: number;
+      fallSpeed: number;
+      customImages: string[];
+    };
+    
+    // Quiz Game
+    quizGame: {
+      celebrationMessage: string;
+    };
+    
+    // Achievement System
+    achievementSystem: {
+      title: string;
+      description: string;
+      celebrationMessage: string;
+      dailyTasks: Array<{
+        title: string;
+        description: string;
+        heartsReward: number;
+      }>;
+      weeklyChallenges: Array<{
+        title: string;
+        description: string;
+        heartsReward: number;
+      }>;
+      monthlyMilestones: Array<{
+        title: string;
+        description: string;
+        heartsReward: number;
+      }>;
+    };
+  };
 }
 
 export const defaultContent: WebsiteContent = {
@@ -125,19 +218,182 @@ export const defaultContent: WebsiteContent = {
   
   // Profile pictures - empty by default
   profilePictures: {},
+  
+  // Game Stats - default values
+  gameStats: {
+    memoryCardCompleted: false,
+    loveSongCompleted: false,
+    flowerGardenCompleted: false,
+    catchTheKittyCompleted: false,
+    quizCompleted: false,
+    gamesPlayed: 0,
+    daysActive: 0,
+    totalHearts: 0,
+  },
+  
+  // Game Customization - default values
+  gameCustomization: {
+    // Memory Card Game
+    memoryCardGame: {
+      title: "Memory Card Game!",
+      description: "Match romantic pairs to earn hearts",
+      emojis: ['💕', '💖', '💝', '💗', '💓', '💞', '💟', '💘', '🌹', '🌸', '🌺', '🌷'],
+      heartsReward: 10,
+      celebrationMessage: "🎉 Amazing! You've completed the Memory Card Game! Your love memory is perfect! 💕",
+      customImages: [], // Empty array for admin to add custom images
+    },
+    
+    // Love Song Puzzle Game
+    loveSongPuzzleGame: {
+      title: "Love Song Puzzle!",
+      description: "Arrange musical notes to complete love songs",
+      songs: [
+        {
+          title: "Can't Help Falling in Love",
+          artist: "Elvis Presley",
+          notes: ["Do", "Mi", "Sol", "Do", "Mi", "Sol", "Do"],
+          difficulty: "easy",
+          heartsReward: 3,
+        },
+        {
+          title: "Perfect",
+          artist: "Ed Sheeran",
+          notes: ["Do", "Re", "Mi", "Fa", "Sol", "La", "Ti", "Do"],
+          difficulty: "medium",
+          heartsReward: 5,
+        },
+        {
+          title: "All of Me",
+          artist: "John Legend",
+          notes: ["Do", "Mi", "Sol", "Ti", "Do", "Mi", "Sol", "Ti"],
+          difficulty: "medium",
+          heartsReward: 5,
+        },
+        {
+          title: "Just the Way You Are",
+          artist: "Bruno Mars",
+          notes: ["Do", "Re", "Mi", "Fa", "Sol", "Fa", "Mi", "Re"],
+          difficulty: "easy",
+          heartsReward: 3,
+        },
+        {
+          title: "A Thousand Years",
+          artist: "Christina Perri",
+          notes: ["Do", "Mi", "Sol", "Do", "Mi", "Sol", "La", "Sol"],
+          difficulty: "hard",
+          heartsReward: 8,
+        }
+      ],
+      celebrationMessage: "🎵 Beautiful! You've completed the Love Song Puzzle! Your musical heart is in perfect harmony! 💖",
+    },
+    
+    // Flower Garden Game
+    flowerGardenGame: {
+      title: "Flower Garden!",
+      description: "Plant, water, and grow flowers for hearts",
+      flowerTypes: [
+        { type: 'rose', emoji: '🌹', daysToGrow: 6, heartsReward: 3, rarity: 'rare' },
+        { type: 'daisy', emoji: '🌸', daysToGrow: 3, heartsReward: 1, rarity: 'common' },
+        { type: 'tulip', emoji: '🌷', daysToGrow: 4, heartsReward: 2, rarity: 'medium' },
+        { type: 'sunflower', emoji: '🌻', daysToGrow: 7, heartsReward: 4, rarity: 'special' },
+        { type: 'carnation', emoji: '🌺', daysToGrow: 5, heartsReward: 2, rarity: 'medium' },
+        { type: 'marigold', emoji: '🌼', daysToGrow: 4, heartsReward: 1, rarity: 'common' }
+      ],
+      waterLevel: 10,
+      gridSize: 6,
+      celebrationMessage: "🌺 Wonderful! You've completed the Flower Garden! Your love has bloomed beautifully! 🌸",
+    },
+    
+    // Catch the Kitty Game
+    catchTheKittyGame: {
+      title: "Catch the Kitty!",
+      description: "Catch falling kitties in your basket to earn hearts",
+      heartsReward: 15,
+      celebrationMessage: "🐱 Amazing! You've caught all the kitties! Your love reflexes are purr-fect! 💕",
+      numberOfKitties: 10,
+      fallSpeed: 2,
+      customImages: [],
+    },
+    
+    // Quiz Game
+    quizGame: {
+      celebrationMessage: "🧠 Brilliant! You've completed the Quiz! Your love knowledge is perfect! 💝",
+    },
+    
+    // Achievement System
+    achievementSystem: {
+      title: "Achievements!",
+      description: "Complete challenges and unlock rewards",
+      celebrationMessage: "Congratulations! You've unlocked a new achievement! 🎉",
+      dailyTasks: [
+        { title: "Quiz Master", description: "Complete the daily quiz", heartsReward: 2 },
+        { title: "Game Enthusiast", description: "Play at least 2 games today", heartsReward: 1 },
+        { title: "Heart Collector", description: "Earn 5 hearts today", heartsReward: 3 }
+      ],
+      weeklyChallenges: [
+        { title: "Perfect Week", description: "Complete all daily tasks for 7 days", heartsReward: 10 },
+        { title: "Game Champion", description: "Win 10 games this week", heartsReward: 8 },
+        { title: "Heart Millionaire", description: "Earn 50 hearts this week", heartsReward: 15 }
+      ],
+      monthlyMilestones: [
+        { title: "Loyal Player", description: "Visit for 30 consecutive days", heartsReward: 25 },
+        { title: "Game Master", description: "Complete all games at least once", heartsReward: 30 },
+        { title: "Heart Legend", description: "Earn 200 hearts this month", heartsReward: 40 }
+      ],
+    },
+  },
 };
 
 // Enhanced saveContent function that saves to both localStorage and Firebase
 export const saveContent = (content: WebsiteContent): void => {
   try {
-    // Save to localStorage first
-    localStorage.setItem('websiteContent', JSON.stringify(content));
+    // Clean the content first to remove any invalid values
+    const cleanedContent = cleanContent(content);
     
-    // Also save to Firebase if available
-    if (isFirebaseAvailable()) {
-      saveContentToFirebase(content).catch(error => {
+    // Validate content before saving to prevent Firebase errors
+    const validateContent = (obj: any): boolean => {
+      if (obj === null || obj === undefined) return false;
+      if (typeof obj === 'object') {
+        if (Array.isArray(obj)) {
+          return obj.every(validateContent);
+        } else {
+          return Object.values(obj).every(validateContent);
+        }
+      }
+      return true;
+    };
+    
+    // Check if cleaned content is valid for Firebase
+    if (!validateContent(cleanedContent)) {
+      console.warn('⚠️ Content contains invalid values after cleaning. Saving to localStorage only.');
+      localStorage.setItem('websiteContent', JSON.stringify(cleanedContent));
+      return;
+    }
+    
+    // Check content size before saving
+    const contentSize = JSON.stringify(cleanedContent).length;
+    const maxFirebaseSize = 800000; // Leave buffer below 1MB limit
+    
+    // Save to localStorage first
+    try {
+      localStorage.setItem('websiteContent', JSON.stringify(cleanedContent));
+    } catch (storageError) {
+      console.warn('⚠️ localStorage save failed:', storageError);
+      // If localStorage fails, try to save a compressed version
+      if (storageError instanceof Error && storageError.name === 'QuotaExceededError') {
+        console.warn('⚠️ Storage quota exceeded, attempting to save compressed version...');
+        // This will be handled by saveContentWithCompression
+        return;
+      }
+    }
+    
+    // Only save to Firebase if content is small enough and valid
+    if (isFirebaseAvailable() && contentSize <= maxFirebaseSize) {
+      saveContentToFirebase(cleanedContent).catch(error => {
         console.warn('⚠️ Firebase save failed, but localStorage save succeeded:', error);
       });
+    } else if (contentSize > maxFirebaseSize) {
+      console.warn('⚠️ Content too large for Firebase (', contentSize, 'bytes). Saving to localStorage only.');
     }
   } catch (error) {
     console.error('Error saving content:', error);
@@ -341,6 +597,17 @@ export const cleanupOldData = async (): Promise<void> => {
       content.customMusic = null;
     }
     
+    // Clean up oversized game customization images
+    if (content.gameCustomization?.memoryCardGame?.customImages) {
+      const cleanedImages = content.gameCustomization.memoryCardGame.customImages.filter(image => {
+        if (image && getDataUrlSize(image) > MAX_IMAGE_SIZE_MB) {
+          return false; // Remove oversized images
+        }
+        return true;
+      });
+      content.gameCustomization.memoryCardGame.customImages = cleanedImages;
+    }
+    
     // Save cleaned content
     saveContent(content);
   } catch (error) {
@@ -348,7 +615,7 @@ export const cleanupOldData = async (): Promise<void> => {
   }
 };
 
-export const compressImage = (imageData: string, maxSize: number = 500000): Promise<string> => {
+export const compressImage = (imageData: string, maxSize: number = 200000): Promise<string> => {
   try {
     // If image is already small enough, return as is
     if (imageData.length <= maxSize) {
@@ -362,22 +629,85 @@ export const compressImage = (imageData: string, maxSize: number = 500000): Prom
     
     return new Promise((resolve) => {
       img.onload = () => {
-        // Calculate new dimensions to reduce size
         let { width, height } = img;
-        const ratio = Math.sqrt(maxSize / imageData.length);
+        let quality = 0.8; // Start with high quality
         
-        width = Math.floor(width * ratio);
-        height = Math.floor(height * ratio);
+        // Calculate target size based on original image size
+        const originalSize = imageData.length;
+        const compressionRatio = maxSize / originalSize;
         
-        canvas.width = width;
-        canvas.height = height;
+        // Determine target dimensions
+        let targetWidth = width;
+        let targetHeight = height;
+        
+        // If image is very large, be more aggressive with resizing
+        if (originalSize > maxSize * 3) {
+          // For very large images, reduce dimensions significantly
+          const scaleFactor = Math.sqrt(compressionRatio) * 0.6;
+          targetWidth = Math.floor(width * scaleFactor);
+          targetHeight = Math.floor(height * scaleFactor);
+          quality = 0.7;
+        } else if (originalSize > maxSize * 2) {
+          // For large images, moderate reduction
+          const scaleFactor = Math.sqrt(compressionRatio) * 0.8;
+          targetWidth = Math.floor(width * scaleFactor);
+          targetHeight = Math.floor(height * scaleFactor);
+          quality = 0.75;
+        } else {
+          // For moderately large images, slight reduction
+          const scaleFactor = Math.sqrt(compressionRatio);
+          targetWidth = Math.floor(width * scaleFactor);
+          targetHeight = Math.floor(height * scaleFactor);
+          quality = 0.8;
+        }
+        
+        // Ensure minimum dimensions for usability
+        targetWidth = Math.max(targetWidth, 150);
+        targetHeight = Math.max(targetHeight, 150);
+        
+        // Ensure maximum dimensions don't exceed reasonable limits
+        targetWidth = Math.min(targetWidth, 800);
+        targetHeight = Math.min(targetHeight, 800);
+        
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
         
         // Draw resized image
-        ctx?.drawImage(img, 0, 0, width, height);
+        ctx?.drawImage(img, 0, 0, targetWidth, targetHeight);
         
-        // Convert to compressed format
-        const compressed = canvas.toDataURL('image/jpeg', 0.7);
-        resolve(compressed);
+        // Try to compress with calculated quality
+        let compressed = canvas.toDataURL('image/jpeg', quality);
+        
+        // If still too large, progressively reduce quality
+        const qualityLevels = [0.7, 0.6, 0.5, 0.4, 0.3];
+        for (const testQuality of qualityLevels) {
+          if (compressed.length <= maxSize) break;
+          
+          compressed = canvas.toDataURL('image/jpeg', testQuality);
+          
+          // If we're getting close, try even lower quality
+          if (compressed.length > maxSize * 1.2 && testQuality > 0.2) {
+            compressed = canvas.toDataURL('image/jpeg', testQuality * 0.8);
+          }
+        }
+        
+        // If still too large, try WebP format (better compression)
+        if (compressed.length > maxSize && canvas.toBlob) {
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const webpData = reader.result as string;
+                resolve(webpData.length <= maxSize ? webpData : compressed);
+              };
+              reader.readAsDataURL(blob);
+            } else {
+              resolve(compressed);
+            }
+          }, 'image/webp', 0.8);
+        } else {
+          resolve(compressed);
+        }
       };
       
       img.src = imageData;
@@ -388,36 +718,115 @@ export const compressImage = (imageData: string, maxSize: number = 500000): Prom
   }
 };
 
+// Helper function to clean up undefined/null values that cause Firebase errors
+const cleanContent = (obj: any): any => {
+  if (obj === null || obj === undefined) return null;
+  if (typeof obj === 'object') {
+    if (Array.isArray(obj)) {
+      const cleanedArray = obj.map(cleanContent).filter(item => item !== null);
+      return cleanedArray.length > 0 ? cleanedArray : [];
+    } else {
+      const cleaned: any = {};
+      for (const [key, value] of Object.entries(obj)) {
+        const cleanedValue = cleanContent(value);
+        if (cleanedValue !== null && cleanedValue !== undefined) {
+          cleaned[key] = cleanedValue;
+        }
+      }
+      return Object.keys(cleaned).length > 0 ? cleaned : {};
+    }
+  }
+  return obj;
+};
+
 // Enhanced saveContentWithCompression function
 export const saveContentWithCompression = async (content: WebsiteContent): Promise<void> => {
   try {
     // Clean up old data first
     await cleanupOldData();
     
-    // Check current storage size
-    const currentSize = getStorageSizeMB();
+    // Always compress images before saving to prevent size issues
+    const compressedContent = { ...content };
     
-    // If storage is getting full, compress large items
-    if (currentSize > STORAGE_WARNING_THRESHOLD_MB) {
-      // Compress large images and music
-      if (content.customImages) {
-        Object.entries(content.customImages).forEach(([key, dataUrl]) => {
-          if (dataUrl && getDataUrlSize(dataUrl) > MAX_IMAGE_SIZE_MB) {
-            content.customImages[key] = compressImage(dataUrl, MAX_IMAGE_SIZE_MB);
+    // Clean the content to remove invalid nested entities
+    const cleanedContent = cleanContent(compressedContent);
+    
+    // Compress custom images in gameCustomization
+    if (cleanedContent.gameCustomization?.memoryCardGame?.customImages) {
+      const compressedImages = await Promise.all(
+        cleanedContent.gameCustomization.memoryCardGame.customImages.map(async (image) => {
+          if (image && getDataUrlSize(image) > MAX_IMAGE_SIZE_MB) {
+            return await compressImage(image, MAX_IMAGE_SIZE_MB);
           }
-        });
-      }
-      
-      if (content.customMusic && getDataUrlSize(content.customMusic) > MAX_MUSIC_SIZE_MB) {
-        content.customMusic = compressAudio(content.customMusic, MAX_MUSIC_SIZE_MB);
-      }
-      
-      // Save compressed content
-      localStorage.setItem('websiteContent', JSON.stringify(content));
+          return image;
+        })
+      );
+      cleanedContent.gameCustomization.memoryCardGame.customImages = compressedImages;
     }
     
-    // Save the content (both localStorage and Firebase)
-    saveContent(content);
+    // Compress other custom images
+    if (cleanedContent.customImages) {
+      for (const [key, dataUrl] of Object.entries(cleanedContent.customImages)) {
+        if (dataUrl && getDataUrlSize(dataUrl) > MAX_IMAGE_SIZE_MB) {
+          cleanedContent.customImages[key] = await compressImage(dataUrl, MAX_IMAGE_SIZE_MB);
+        }
+      }
+    }
+    
+    // Compress custom music
+    if (cleanedContent.customMusic && getDataUrlSize(cleanedContent.customMusic) > MAX_MUSIC_SIZE_MB) {
+      cleanedContent.customMusic = compressAudio(cleanedContent.customMusic, MAX_MUSIC_SIZE_MB);
+    }
+    
+         // Check if content is still too large for Firebase (approximate check)
+     const contentSize = JSON.stringify(cleanedContent).length;
+     if (contentSize > 800000) { // Leave some buffer below 1MB limit
+       console.warn('⚠️ Content still too large for Firebase after compression. Attempting aggressive size reduction...');
+       
+       // Try to reduce size by removing non-essential data
+       const reducedContent = { ...cleanedContent };
+       
+       // Remove old profile pictures if they exist
+       if (reducedContent.profilePictures) {
+         Object.keys(reducedContent.profilePictures).forEach(key => {
+           if (reducedContent.profilePictures[key] && 
+               getDataUrlSize(reducedContent.profilePictures[key]) > 0.1) { // Remove if > 100KB
+             reducedContent.profilePictures[key] = null;
+           }
+         });
+       }
+       
+       // Remove old custom images if they exist
+       if (reducedContent.customImages) {
+         Object.keys(reducedContent.customImages).forEach(key => {
+           if (reducedContent.customImages[key] && 
+               getDataUrlSize(reducedContent.customImages[key]) > 0.1) { // Remove if > 100KB
+             reducedContent.customImages[key] = null;
+           }
+         });
+       }
+       
+       // Remove old custom music if it exists
+       if (reducedContent.customMusic && getDataUrlSize(reducedContent.customMusic) > 1.0) {
+         reducedContent.customMusic = null;
+       }
+       
+       // Check if reduction helped
+       const reducedSize = JSON.stringify(reducedContent).length;
+       if (reducedSize <= 800000) {
+         console.warn('✅ Content size reduced successfully. Saving to Firebase.');
+         saveContent(reducedContent);
+         return;
+       } else {
+         console.warn('⚠️ Content still too large after reduction. Saving to localStorage only.');
+         // Save to localStorage only
+         localStorage.setItem('websiteContent', JSON.stringify(reducedContent));
+         return;
+       }
+     }
+    
+    // Save the cleaned and compressed content (both localStorage and Firebase)
+    saveContent(cleanedContent);
     
   } catch (error) {
     console.error('Error saving content with compression:', error);
@@ -462,6 +871,84 @@ export const subscribeToFirebaseUpdates = (callback: (content: WebsiteContent | 
       callback(null);
     }
   });
+};
+
+// Function to handle image uploads with automatic compression
+export const handleImageUpload = async (file: File, maxSizeMB: number = 0.2): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    try {
+      // Validate file
+      if (!file || !(file instanceof File)) {
+        reject(new Error('Invalid file provided'));
+        return;
+      }
+      
+      // Accept any file size - we'll compress it automatically
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          if (!event.target || !event.target.result) {
+            reject(new Error('Failed to read file'));
+            return;
+          }
+          
+          const result = event.target.result as string;
+          
+          // Always compress images to ensure they fit within Firebase limits
+          // Target size is 200KB for optimal storage and performance
+          const compressed = await compressImage(result, maxSizeMB * 1024 * 1024);
+          resolve(compressed);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = () => reject(new Error('Error reading file'));
+      reader.readAsDataURL(file);
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
+// Function to clean up and fix existing content issues
+export const cleanupAndFixContent = async (): Promise<WebsiteContent> => {
+  try {
+    // Load current content
+    const currentContent = await loadContent();
+    
+    // Clean the content structure
+    const cleanedContent = cleanContent(currentContent);
+    
+    // Ensure all required properties exist
+    const fixedContent: WebsiteContent = {
+      ...defaultContent,
+      ...cleanedContent,
+      // Ensure gameCustomization exists and is properly structured
+      gameCustomization: {
+        ...defaultContent.gameCustomization,
+        ...cleanedContent.gameCustomization,
+        // Ensure memoryCardGame exists
+        memoryCardGame: {
+          ...defaultContent.gameCustomization.memoryCardGame,
+          ...cleanedContent.gameCustomization?.memoryCardGame,
+          customImages: cleanedContent.gameCustomization?.memoryCardGame?.customImages || []
+        }
+      },
+      // Ensure gameStats exists
+      gameStats: {
+        ...defaultContent.gameStats,
+        ...cleanedContent.gameStats
+      }
+    };
+    
+    // Save the fixed content
+    saveContent(fixedContent);
+    
+    return fixedContent;
+  } catch (error) {
+    console.error('Error cleaning up content:', error);
+    return defaultContent;
+  }
 };
 
 // Re-export isFirebaseAvailable from Firebase service

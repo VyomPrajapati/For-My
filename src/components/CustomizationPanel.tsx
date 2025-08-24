@@ -1,23 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Settings, Save, Upload, X, Edit3, Image as ImageIcon, Download, Upload as UploadIcon, Trash2, Music, FileText, Heart } from 'lucide-react';
-import { WebsiteContent, saveContentWithCompression, saveCustomImage, saveCustomMusic, getStorageSizeMB, exportContent, importContent, isFirebaseAvailable } from '../utils/contentManager';
+import { WebsiteContent, saveContentWithCompression, saveCustomImage, saveCustomMusic, getStorageSizeMB, exportContent, importContent, isFirebaseAvailable, handleImageUpload, cleanupAndFixContent } from '../utils/contentManager';
 
 interface CustomizationPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onContentUpdate: (content: WebsiteContent) => void;
   currentContent: WebsiteContent;
+  onGameReset?: (gameType: 'memoryCard' | 'loveSong' | 'flowerGarden' | 'catchTheKitty' | 'quiz') => void;
 }
 
 const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
   isOpen,
   onClose,
   onContentUpdate,
-  currentContent
+  currentContent,
+  onGameReset
 }) => {
   const [content, setContent] = useState<WebsiteContent>(currentContent);
-  const [activeTab, setActiveTab] = useState<'text' | 'images' | 'music'>('text');
+  const [activeTab, setActiveTab] = useState<'text' | 'images' | 'music' | 'games'>('text');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedImageKey, setSelectedImageKey] = useState<string>('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -71,6 +73,222 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     }
   }, [isOpen, currentContent]);
 
+    // Function to handle multiple image uploads for Memory Card Game
+  const handleMultipleImageUpload = async (files: File[]) => {
+    try {
+      console.log('handleMultipleImageUpload called with files:', files);
+      
+      if (!files || !Array.isArray(files) || files.length === 0) {
+        alert('❌ No valid files provided for upload');
+        return;
+      }
+      
+      const currentImages = content.gameCustomization?.memoryCardGame?.customImages || [];
+      const remainingSlots = 6 - currentImages.length;
+      const filesToProcess = files.slice(0, remainingSlots);
+      
+      if (filesToProcess.length === 0) {
+        alert('❌ No more image slots available!');
+        return;
+      }
+      
+      // Show processing message for large files
+      const largeFiles = filesToProcess.filter(file => file.size > 5 * 1024 * 1024); // 5MB+
+      if (largeFiles.length > 0) {
+        alert(`🔄 Processing ${largeFiles.length} large image(s)... This may take a moment as we optimize them for the best quality!`);
+      }
+      
+      // Process multiple images
+      const newImages: string[] = [...currentImages];
+      let successCount = 0;
+      let errorCount = 0;
+      
+      for (let i = 0; i < filesToProcess.length; i++) {
+        const file = filesToProcess[i];
+        try {
+          console.log(`Processing file ${i + 1}:`, file.name, file.type, file.size);
+          
+          // Show progress for multiple files
+          if (filesToProcess.length > 1) {
+            const progress = Math.round(((i + 1) / filesToProcess.length) * 100);
+            console.log(`Processing image ${i + 1}/${filesToProcess.length} (${progress}%)`);
+          }
+          
+          // Use the new image handling function with automatic compression
+          const compressedImage = await handleImageUpload(file, 0.2); // Target 200KB
+          newImages.push(compressedImage);
+          successCount++;
+          
+          console.log(`Successfully processed ${file.name}`);
+          
+          // Show individual success for large files
+          if (file.size > 5 * 1024 * 1024) {
+            const originalSize = (file.size / (1024 * 1024)).toFixed(1);
+            const compressedSize = (compressedImage.length / (1024 * 1024)).toFixed(2);
+            alert(`✅ ${file.name} compressed from ${originalSize}MB to ${compressedSize}MB!`);
+          }
+        } catch (error) {
+          errorCount++;
+          console.error(`Error processing file ${file.name}:`, error);
+          if (error instanceof Error) {
+            alert(`❌ Error processing ${file.name}: ${error.message}`);
+          } else {
+            alert(`❌ Error processing ${file.name}. Please try again.`);
+          }
+        }
+      }
+      
+      // Update content with new images
+      setContent({
+        ...content,
+        gameCustomization: {
+          ...content.gameCustomization,
+          memoryCardGame: {
+            ...content.gameCustomization?.memoryCardGame,
+            customImages: newImages
+          }
+        }
+      });
+      
+      // Show comprehensive success message
+      if (successCount > 0) {
+        let message = '';
+        if (successCount === 1) {
+          message = `✅ Successfully added 1 image!`;
+        } else {
+          message = `✅ Successfully added ${successCount} images!`;
+        }
+        
+        // Add compression info
+        if (largeFiles.length > 0) {
+          message += `\n\n🔄 Large images were automatically compressed to ~200KB for optimal performance while maintaining good quality.`;
+        }
+        
+        alert(message);
+      }
+      
+      if (errorCount > 0) {
+        alert(`⚠️ ${errorCount} image(s) failed to upload. Please check the file format.`);
+      }
+      
+    } catch (error) {
+      console.error('Error in handleMultipleImageUpload:', error);
+      if (error instanceof Error) {
+        alert(`❌ ${error.message}`);
+      } else {
+        alert('❌ Error processing images. Please try again.');
+      }
+    }
+  };
+
+  // Function to handle multiple image uploads for Catch the Kitty Game
+  const handleMultipleKittyImageUpload = async (files: File[]) => {
+    try {
+      console.log('handleMultipleKittyImageUpload called with files:', files);
+      
+      if (!files || !Array.isArray(files) || files.length === 0) {
+        alert('❌ No valid files provided for upload');
+        return;
+      }
+      
+      const currentImages = content.gameCustomization?.catchTheKittyGame?.customImages || [];
+      const remainingSlots = 10 - currentImages.length;
+      const filesToProcess = files.slice(0, remainingSlots);
+      
+      if (filesToProcess.length === 0) {
+        alert('❌ No more image slots available!');
+        return;
+      }
+      
+      // Show processing message for large files
+      const largeFiles = filesToProcess.filter(file => file.size > 5 * 1024 * 1024); // 5MB+
+      if (largeFiles.length > 0) {
+        alert(`🔄 Processing ${largeFiles.length} large kitty image(s)... This may take a moment as we optimize them for the best quality!`);
+      }
+      
+      // Process multiple images
+      const newImages: string[] = [...currentImages];
+      let successCount = 0;
+      let errorCount = 0;
+      
+      for (let i = 0; i < filesToProcess.length; i++) {
+        const file = filesToProcess[i];
+        try {
+          console.log(`Processing kitty file ${i + 1}:`, file.name, file.type, file.size);
+          
+          // Show progress for multiple files
+          if (filesToProcess.length > 1) {
+            const progress = Math.round(((i + 1) / filesToProcess.length) * 100);
+            console.log(`Processing kitty image ${i + 1}/${filesToProcess.length} (${progress}%)`);
+          }
+          
+          // Use the new image handling function with automatic compression
+          const compressedImage = await handleImageUpload(file, 0.2); // Target 200KB
+          newImages.push(compressedImage);
+          successCount++;
+          
+          console.log(`Successfully processed kitty ${file.name}`);
+          
+          // Show individual success for large files
+          if (file.size > 5 * 1024 * 1024) {
+            const originalSize = (file.size / (1024 * 1024)).toFixed(1);
+            const compressedSize = (compressedImage.length / (1024 * 1024)).toFixed(2);
+            alert(`✅ ${file.name} compressed from ${originalSize}MB to ${compressedSize}MB!`);
+          }
+        } catch (error) {
+          errorCount++;
+          console.error(`Error processing kitty file ${file.name}:`, error);
+          if (error instanceof Error) {
+            alert(`❌ Error processing ${file.name}: ${error.message}`);
+          } else {
+            alert(`❌ Error processing ${file.name}. Please try again.`);
+          }
+        }
+      }
+      
+      // Update content with new images
+      setContent({
+        ...content,
+        gameCustomization: {
+          ...content.gameCustomization,
+          catchTheKittyGame: {
+            ...content.gameCustomization?.catchTheKittyGame,
+            customImages: newImages
+          }
+        }
+      });
+      
+      // Show comprehensive success message
+      if (successCount > 0) {
+        let message = '';
+        if (successCount === 1) {
+          message = `✅ Successfully added 1 kitty image!`;
+        } else {
+          message = `✅ Successfully added ${successCount} kitty images!`;
+        }
+        
+        // Add compression info
+        if (largeFiles.length > 0) {
+          message += `\n\n🔄 Large images were automatically compressed to ~200KB for optimal performance while maintaining good quality.`;
+        }
+        
+        alert(message);
+      }
+      
+      if (errorCount > 0) {
+        alert(`⚠️ ${errorCount} kitty image(s) failed to upload. Please check the file format.`);
+      }
+      
+    } catch (error) {
+      console.error('Error in handleMultipleKittyImageUpload:', error);
+      if (error instanceof Error) {
+        alert(`❌ ${error.message}`);
+      } else {
+        alert('❌ Error processing kitty images. Please try again.');
+      }
+    }
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -113,7 +331,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     }
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, imageKey: string) => {
+  const handleRegularImageUpload = (event: React.ChangeEvent<HTMLInputElement>, imageKey: string) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -182,7 +400,8 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
   const tabs = [
     { id: 'text', label: 'Text Content', icon: FileText },
     { id: 'images', label: 'Images', icon: ImageIcon },
-    { id: 'music', label: 'Music', icon: Music }
+    { id: 'music', label: 'Music', icon: Music },
+    { id: 'games', label: 'Games Customize', icon: Heart }
   ];
 
   if (!isOpen) return null;
@@ -264,7 +483,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as 'text' | 'images' | 'music')}
+                onClick={() => setActiveTab(tab.id as 'text' | 'images' | 'music' | 'games')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? 'bg-pink-500 text-white'
@@ -787,7 +1006,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={(e) => handleImageUpload(e, 'panel3')}
+                                                        onChange={(e) => handleRegularImageUpload(e, 'panel3')}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                         />
                         {content.customImages?.panel3 && (
@@ -822,7 +1041,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={(e) => handleImageUpload(e, 'envelope')}
+                                                        onChange={(e) => handleRegularImageUpload(e, 'envelope')}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
                         />
                         {content.customImages?.envelope && (
@@ -938,6 +1157,1297 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                   )}
                 </div>
               </div>
+            </div>
+          )}
+          
+                     {/* Games Customization Tab */}
+           {activeTab === 'games' && (
+             <div className="space-y-6">
+               {/* Global Game Reset Control */}
+               <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                 <div className="flex items-center justify-between">
+                   <div>
+                     <h3 className="text-lg font-semibold text-orange-800 mb-2">🔄 Global Game Management</h3>
+                     <p className="text-sm text-orange-600">
+                       Reset all games at once or manage individual game resets below
+                     </p>
+                   </div>
+                   <div className="flex gap-2">
+                     <button
+                       onClick={() => {
+                         if (confirm('⚠️ DANGER: Are you sure you want to reset ALL games for ALL users? This will clear completion status for Memory Card, Love Song Puzzle, Flower Garden, and Quiz games. Users will need to play all games again to earn hearts.')) {
+                           // Reset all games by updating localStorage and content
+                           const currentContent = JSON.parse(localStorage.getItem('websiteContent') || '{}');
+                           if (currentContent.gameStats) {
+                             currentContent.gameStats.memoryCardCompleted = false;
+                             currentContent.gameStats.loveSongCompleted = false;
+                             currentContent.gameStats.flowerGardenCompleted = false;
+                             currentContent.gameStats.quizCompleted = false;
+                             localStorage.setItem('websiteContent', JSON.stringify(currentContent));
+                             
+                             // Also update the current content state to ensure it persists
+                             const updatedContent = { ...content };
+                             if (!updatedContent.gameStats) {
+                               updatedContent.gameStats = {
+                                 memoryCardCompleted: false,
+                                 loveSongCompleted: false,
+                                 flowerGardenCompleted: false,
+                                 catchTheKittyCompleted: false,
+                                 quizCompleted: false,
+                                 gamesPlayed: 0,
+                                 daysActive: 0,
+                                 totalHearts: 0,
+                               };
+                             } else {
+                               updatedContent.gameStats.memoryCardCompleted = false;
+                               updatedContent.gameStats.loveSongCompleted = false;
+                               updatedContent.gameStats.flowerGardenCompleted = false;
+                               updatedContent.gameStats.catchTheKittyCompleted = false;
+                               updatedContent.gameStats.quizCompleted = false;
+                             }
+                             setContent(updatedContent);
+                             
+                             // Save to Firebase if available
+                             if (isFirebaseAvailable()) {
+                               saveContentWithCompression(updatedContent);
+                             }
+                             
+                             alert('✅ All games have been reset for all users!');
+                           }
+                         }
+                       }}
+                       className="px-4 py-2 bg-orange-500 text-white text-sm rounded-lg hover:bg-orange-600 transition-colors font-medium"
+                     >
+                       🔄 Reset All Games
+                     </button>
+                     
+                     <button
+                       onClick={async () => {
+                         if (confirm('🧹 Clean up oversized images and content? This will compress large images to prevent Firebase errors.')) {
+                           try {
+                             // Import cleanupOldData function
+                             const { cleanupOldData } = await import('../utils/contentManager');
+                             
+                             // Clean up oversized content
+                             await cleanupOldData();
+                             
+                             // Reload content to show cleaned version
+                             const savedContent = localStorage.getItem('websiteContent');
+                             if (savedContent) {
+                               const parsed = JSON.parse(savedContent);
+                               setContent(parsed);
+                             }
+                             
+                             alert('✅ Content cleaned up successfully! Large images have been compressed.');
+                           } catch (error) {
+                             alert('❌ Error cleaning up content. Please try again.');
+                           }
+                         }
+                       }}
+                       className="px-3 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
+                     >
+                       🧹 Clean Up Content
+                     </button>
+                     
+                     <button
+                       onClick={async () => {
+                         if (confirm('🔧 Fix content structure issues and Firebase errors? This will clean up invalid data.')) {
+                           try {
+                             const fixedContent = await cleanupAndFixContent();
+                             setContent(fixedContent);
+                             alert('✅ Content issues fixed successfully! Firebase errors should be resolved.');
+                           } catch (error) {
+                             alert('❌ Error fixing content: ' + error);
+                           }
+                         }
+                       }}
+                       className="px-3 py-2 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
+                     >
+                       🔧 Fix Issues
+                     </button>
+                   </div>
+                 </div>
+               </div>
+               
+               {/* Memory Card Game */}
+               <div className="bg-gray-50 p-4 rounded-lg">
+                 <h3 className="text-lg font-semibold text-gray-800 mb-3">🃏 Memory Card Game</h3>
+                 <div className="space-y-3">
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                       Game Title
+                     </label>
+                     <input
+                       type="text"
+                       value={content.gameCustomization?.memoryCardGame?.title || ""}
+                       onChange={(e) => setContent({
+                         ...content,
+                         gameCustomization: {
+                           ...content.gameCustomization,
+                           memoryCardGame: {
+                             ...content.gameCustomization?.memoryCardGame,
+                             title: e.target.value
+                           }
+                         }
+                       })}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                       placeholder="Enter game title..."
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                       Game Description
+                     </label>
+                     <input
+                       type="text"
+                       value={content.gameCustomization?.memoryCardGame?.description || ""}
+                       onChange={(e) => setContent({
+                         ...content,
+                         gameCustomization: {
+                           ...content.gameCustomization,
+                           memoryCardGame: {
+                             ...content.gameCustomization?.memoryCardGame,
+                             description: e.target.value
+                           }
+                         }
+                       })}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                       placeholder="Enter game description..."
+                     />
+                   </div>
+                                       <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Hearts Reward
+                      </label>
+                      <input
+                        type="number"
+                        value={content.gameCustomization?.memoryCardGame?.heartsReward || 10}
+                        onChange={(e) => setContent({
+                          ...content,
+                          gameCustomization: {
+                            ...content.gameCustomization,
+                            memoryCardGame: {
+                              ...content.gameCustomization?.memoryCardGame,
+                              heartsReward: parseInt(e.target.value) || 10
+                            }
+                          }
+                        })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                        placeholder="Enter hearts reward..."
+                      />
+                    </div>
+                    
+                    {/* Custom Images for Memory Card Game */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        🖼️ Custom Card Images ({content.gameCustomization?.memoryCardGame?.customImages?.length || 0}/6)
+                      </label>
+                      <p className="text-xs text-gray-500 mb-3">
+                        Upload 6 images to create 12 cards (6 pairs). Each image will appear twice to create matching pairs.
+                      </p>
+                      
+                      {/* Image Upload Area */}
+                      <div className="space-y-3">
+                        {/* Existing Images */}
+                        {content.gameCustomization?.memoryCardGame?.customImages?.map((image, index) => (
+                          <div key={index} className="flex items-center gap-3 bg-white p-3 rounded-lg border border-gray-200">
+                            <img
+                              src={image}
+                              alt={`Card ${index + 1}`}
+                              className="w-16 h-16 object-cover rounded-lg border-2 border-pink-200"
+                            />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-700">Card {index + 1}</p>
+                              <p className="text-xs text-gray-500">Will create 2 matching cards</p>
+                            </div>
+                            <button
+                              onClick={() => {
+                                const newImages = content.gameCustomization?.memoryCardGame?.customImages?.filter((_, i) => i !== index) || [];
+                                setContent({
+                                  ...content,
+                                  gameCustomization: {
+                                    ...content.gameCustomization,
+                                    memoryCardGame: {
+                                      ...content.gameCustomization?.memoryCardGame,
+                                      customImages: newImages
+                                    }
+                                  }
+                                });
+                              }}
+                              className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 transition-colors"
+                            >
+                              ❌ Remove
+                            </button>
+                          </div>
+                        ))}
+                        
+                        {/* Add New Image Button */}
+                        {(!content.gameCustomization?.memoryCardGame?.customImages || content.gameCustomization.memoryCardGame.customImages.length < 6) && (
+                          <div 
+                            className="border-2 border-dashed border-pink-300 rounded-lg p-4 text-center hover:border-pink-400 transition-colors"
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.currentTarget.classList.add('border-pink-500', 'bg-pink-50');
+                            }}
+                            onDragLeave={(e) => {
+                              e.currentTarget.classList.remove('border-pink-500', 'bg-pink-50');
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              e.currentTarget.classList.remove('border-pink-500', 'bg-pink-50');
+                              
+                              try {
+                                const files = Array.from(e.dataTransfer.files).filter(file => 
+                                  file.type.startsWith('image/')
+                                );
+                                
+                                if (files.length > 0) {
+                                  console.log(`Dropped ${files.length} image files`);
+                                  handleMultipleImageUpload(files);
+                                }
+                              } catch (error) {
+                                console.error('Error in drag and drop:', error);
+                                alert(`❌ Error processing dropped files: ${error}`);
+                              }
+                            }}
+                          >
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={async (e: React.ChangeEvent<HTMLInputElement>) => {
+                                try {
+                                  if (!e.target || !e.target.files) {
+                                    console.error('File input event target or files is undefined');
+                                    return;
+                                  }
+                                  
+                                  const files = e.target.files;
+                                  if (files && files.length > 0) {
+                                    console.log(`Processing ${files.length} files...`);
+                                    await handleMultipleImageUpload(Array.from(files));
+                                    // Clear the input for future uploads
+                                    e.target.value = '';
+                                  }
+                                } catch (error) {
+                                  console.error('Error in file input onChange:', error);
+                                  alert(`❌ Error processing files: ${error}`);
+                                }
+                              }}
+                              className="hidden"
+                              id="memory-card-image-upload"
+                            />
+                            <label
+                              htmlFor="memory-card-image-upload"
+                              className="cursor-pointer text-pink-500 hover:text-pink-600 font-medium"
+                            >
+                              📁 Click to add images {content.gameCustomization?.memoryCardGame?.customImages?.length || 0}/6
+                            </label>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Supported: JPG, PNG, GIF (automatically compressed to ~200KB)
+                            </p>
+                            <p className="text-xs text-blue-500 mt-1">
+                              💡 You can select multiple images at once! (up to {6 - (content.gameCustomization?.memoryCardGame?.customImages?.length || 0)} remaining)
+                            </p>
+                            <p className="text-xs text-purple-500 mt-1">
+                              🎯 Or drag & drop images here!
+                            </p>
+                            <p className="text-xs text-green-500 mt-1">
+                              🚀 Any image size accepted! Automatically compressed to ~200KB for optimal performance
+                            </p>
+                          </div>
+                        )}
+                        
+                        {/* Info about image count */}
+                        {content.gameCustomization?.memoryCardGame?.customImages && content.gameCustomization.memoryCardGame.customImages.length > 0 && (
+                          <div className="bg-pink-50 p-3 rounded-lg border border-pink-200">
+                            <p className="text-sm text-pink-700 text-center">
+                              💡 {content.gameCustomization.memoryCardGame.customImages.length} images = {content.gameCustomization.memoryCardGame.customImages.length * 2} cards ({content.gameCustomization.memoryCardGame.customImages.length} pairs)
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                                       <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        🎉 Celebration Message
+                      </label>
+                      <textarea
+                        value={content.gameCustomization?.memoryCardGame?.celebrationMessage || ""}
+                        onChange={(e) => setContent({
+                          ...content,
+                          gameCustomization: {
+                            ...content.gameCustomization,
+                            memoryCardGame: {
+                              ...content.gameCustomization?.memoryCardGame,
+                              celebrationMessage: e.target.value
+                            }
+                          }
+                        })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                        placeholder="Message shown when player completes the game..."
+                        rows={3}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        This message will appear in a big heart when someone wins the game! 💕
+                      </p>
+                    </div>
+                    
+                    {/* Game Reset Control */}
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium text-red-800 text-sm">🔄 Game Reset Control</h4>
+                          <p className="text-xs text-red-600 mt-1">
+                            Reset this game's completion status for all users
+                          </p>
+                        </div>
+                        <button
+                                                     onClick={() => {
+                             if (confirm('⚠️ Are you sure you want to reset the Memory Card Game for ALL users? This will clear their completion status and they will need to play again to earn hearts.')) {
+                               // Reset the game by updating localStorage and content
+                               const currentContent = JSON.parse(localStorage.getItem('websiteContent') || '{}');
+                               if (currentContent.gameStats) {
+                                 currentContent.gameStats.memoryCardCompleted = false;
+                                 localStorage.setItem('websiteContent', JSON.stringify(currentContent));
+                                 
+                                 // Also update the current content state to ensure it persists
+                                 const updatedContent = { ...content };
+                                                                   if (!updatedContent.gameStats) {
+                                    updatedContent.gameStats = {
+                                      memoryCardCompleted: false,
+                                      loveSongCompleted: false,
+                                      flowerGardenCompleted: false,
+                                      catchTheKittyCompleted: false,
+                                      quizCompleted: false,
+                                      gamesPlayed: 0,
+                                      daysActive: 0,
+                                      totalHearts: 0,
+                                    };
+                                  }
+                                  updatedContent.gameStats.memoryCardCompleted = false;
+                                 setContent(updatedContent);
+                                 
+                                 // Save to Firebase if available
+                                 if (isFirebaseAvailable()) {
+                                   saveContentWithCompression(updatedContent);
+                                 }
+                                 
+                                 // Notify parent component about the reset
+                                 if (onGameReset) {
+                                   onGameReset('memoryCard');
+                                 }
+                                 
+                                 alert('✅ Memory Card Game has been reset for all users!');
+                               }
+                             }
+                           }}
+                          className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
+                        >
+                          Reset Game
+                        </button>
+                      </div>
+                    </div>
+                 </div>
+               </div>
+
+              {/* Love Song Puzzle Game */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">🎵 Love Song Puzzle Game</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Game Title
+                    </label>
+                    <input
+                      type="text"
+                      value={content.gameCustomization?.loveSongPuzzleGame?.title || ""}
+                      onChange={(e) => setContent({
+                        ...content,
+                        gameCustomization: {
+                          ...content.gameCustomization,
+                          loveSongPuzzleGame: {
+                            ...content.gameCustomization?.loveSongPuzzleGame,
+                            title: e.target.value
+                          }
+                        }
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="Enter game title..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Game Description
+                    </label>
+                    <input
+                      type="text"
+                      value={content.gameCustomization?.loveSongPuzzleGame?.description || ""}
+                      onChange={(e) => setContent({
+                        ...content,
+                        gameCustomization: {
+                          ...content.gameCustomization,
+                          loveSongPuzzleGame: {
+                            ...content.gameCustomization?.loveSongPuzzleGame,
+                            description: e.target.value
+                          }
+                        }
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      placeholder="Enter game description..."
+                    />
+                  </div>
+                  
+                                     {/* Songs Management */}
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                       Songs ({content.gameCustomization?.loveSongPuzzleGame?.songs?.length || 0})
+                     </label>
+                     <div className="space-y-3">
+                       {content.gameCustomization?.loveSongPuzzleGame?.songs?.map((song, index) => (
+                         <div key={index} className="bg-white p-3 rounded-lg border border-gray-200">
+                           <div className="grid grid-cols-2 gap-2 mb-2">
+                             <input
+                               type="text"
+                               value={song.title}
+                               onChange={(e) => {
+                                 const newSongs = [...(content.gameCustomization?.loveSongPuzzleGame?.songs || [])];
+                                 newSongs[index] = { ...newSongs[index], title: e.target.value };
+                                 setContent({
+                                   ...content,
+                                   gameCustomization: {
+                                     ...content.gameCustomization,
+                                     loveSongPuzzleGame: {
+                                       ...content.gameCustomization?.loveSongPuzzleGame,
+                                       songs: newSongs
+                                     }
+                                   }
+                                 });
+                               }}
+                               className="px-2 py-1 border border-gray-300 rounded text-sm"
+                               placeholder="Song title"
+                             />
+                             <input
+                               type="text"
+                               value={song.artist}
+                               onChange={(e) => {
+                                 const newSongs = [...(content.gameCustomization?.loveSongPuzzleGame?.songs || [])];
+                                 newSongs[index] = { ...newSongs[index], artist: e.target.value };
+                                 setContent({
+                                   ...content,
+                                   gameCustomization: {
+                                     ...content.gameCustomization,
+                                     loveSongPuzzleGame: {
+                                       ...content.gameCustomization?.loveSongPuzzleGame,
+                                       songs: newSongs
+                                     }
+                                   }
+                                 });
+                               }}
+                               className="px-2 py-1 border border-gray-300 rounded text-sm"
+                               placeholder="Artist"
+                             />
+                           </div>
+                           <div className="grid grid-cols-3 gap-2 mb-2">
+                             <select
+                               value={song.difficulty}
+                               onChange={(e) => {
+                                 const newSongs = [...(content.gameCustomization?.loveSongPuzzleGame?.songs || [])];
+                                 newSongs[index] = { ...newSongs[index], difficulty: e.target.value as 'easy' | 'medium' | 'hard' };
+                                 setContent({
+                                   ...content,
+                                   gameCustomization: {
+                                     ...content.gameCustomization,
+                                     loveSongPuzzleGame: {
+                                       ...content.gameCustomization?.loveSongPuzzleGame,
+                                       songs: newSongs
+                                     }
+                                   }
+                                 });
+                               }}
+                               className="px-2 py-1 border border-gray-300 rounded text-sm"
+                             >
+                               <option value="easy">Easy</option>
+                               <option value="medium">Medium</option>
+                               <option value="hard">Hard</option>
+                             </select>
+                             <input
+                               type="number"
+                               value={song.heartsReward}
+                               onChange={(e) => {
+                                 const newSongs = [...(content.gameCustomization?.loveSongPuzzleGame?.songs || [])];
+                                 newSongs[index] = { ...newSongs[index], heartsReward: parseInt(e.target.value) || 1 };
+                                 setContent({
+                                   ...content,
+                                   gameCustomization: {
+                                     ...content.gameCustomization,
+                                     loveSongPuzzleGame: {
+                                       ...content.gameCustomization?.loveSongPuzzleGame,
+                                       songs: newSongs
+                                     }
+                                   }
+                                 });
+                               }}
+                               className="px-2 py-1 border border-gray-300 rounded text-sm"
+                               placeholder="Hearts"
+                             />
+                             <button
+                               onClick={() => {
+                                 const newSongs = content.gameCustomization?.loveSongPuzzleGame?.songs?.filter((_, i) => i !== index) || [];
+                                 setContent({
+                                   ...content,
+                                   gameCustomization: {
+                                     ...content.gameCustomization,
+                                     loveSongPuzzleGame: {
+                                       ...content.gameCustomization?.loveSongPuzzleGame,
+                                       songs: newSongs
+                                     }
+                                   }
+                                 });
+                               }}
+                               className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                             >
+                               ❌
+                             </button>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                     <button
+                       onClick={() => {
+                         const newSong = {
+                           title: "New Song",
+                           artist: "Artist",
+                           notes: ["Do", "Re", "Mi"],
+                           difficulty: "easy" as const,
+                           heartsReward: 1
+                         };
+                         const newSongs = [...(content.gameCustomization?.loveSongPuzzleGame?.songs || []), newSong];
+                         setContent({
+                           ...content,
+                           gameCustomization: {
+                             ...content.gameCustomization,
+                             loveSongPuzzleGame: {
+                               ...content.gameCustomization?.loveSongPuzzleGame,
+                               songs: newSongs
+                             }
+                           }
+                         });
+                       }}
+                       className="mt-2 px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
+                     >
+                       ➕ Add New Song
+                     </button>
+                   </div>
+                   
+                                       {/* Celebration Message */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        🎉 Celebration Message
+                      </label>
+                      <textarea
+                        value={content.gameCustomization?.loveSongPuzzleGame?.celebrationMessage || ""}
+                        onChange={(e) => setContent({
+                          ...content,
+                          gameCustomization: {
+                            ...content.gameCustomization,
+                            loveSongPuzzleGame: {
+                              ...content.gameCustomization?.loveSongPuzzleGame,
+                              celebrationMessage: e.target.value
+                            }
+                          }
+                        })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        placeholder="Message shown when player completes the game..."
+                        rows={3}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        This message will appear in a big heart when someone wins the game! 🎵
+                      </p>
+                    </div>
+                    
+                    {/* Game Reset Control */}
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium text-red-800 text-sm">🔄 Game Reset Control</h4>
+                          <p className="text-xs text-red-600 mt-1">
+                            Reset this game's completion status for all users
+                          </p>
+                        </div>
+                        <button
+                                                     onClick={() => {
+                             if (confirm('⚠️ Are you sure you want to reset the Love Song Puzzle Game for ALL users? This will clear their completion status and they will need to play again to earn hearts.')) {
+                               // Reset the game by updating localStorage and content
+                               const currentContent = JSON.parse(localStorage.getItem('websiteContent') || '{}');
+                               if (currentContent.gameStats) {
+                                 currentContent.gameStats.loveSongCompleted = false;
+                                 localStorage.setItem('websiteContent', JSON.stringify(currentContent));
+                                 
+                                 // Also update the current content state to ensure it persists
+                                 const updatedContent = { ...content };
+                                                                   if (!updatedContent.gameStats) {
+                                    updatedContent.gameStats = {
+                                      memoryCardCompleted: false,
+                                      loveSongCompleted: false,
+                                      flowerGardenCompleted: false,
+                                      catchTheKittyCompleted: false,
+                                      quizCompleted: false,
+                                      gamesPlayed: 0,
+                                      daysActive: 0,
+                                      totalHearts: 0,
+                                    };
+                                  }
+                                  updatedContent.gameStats.loveSongCompleted = false;
+                                 setContent(updatedContent);
+                                 
+                                 // Save to Firebase if available
+                                 if (isFirebaseAvailable()) {
+                                   saveContentWithCompression(updatedContent);
+                                 }
+                                 
+                                 alert('✅ Love Song Puzzle Game has been reset for all users!');
+                               }
+                             }
+                           }}
+                          className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
+                        >
+                          Reset Game
+                        </button>
+                      </div>
+                    </div>
+                 </div>
+               </div>
+
+              {/* Flower Garden Game */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">🌺 Flower Garden Game</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Game Title
+                    </label>
+                    <input
+                      type="text"
+                      value={content.gameCustomization?.flowerGardenGame?.title || ""}
+                      onChange={(e) => setContent({
+                        ...content,
+                        gameCustomization: {
+                          ...content.gameCustomization,
+                          flowerGardenGame: {
+                            ...content.gameCustomization?.flowerGardenGame,
+                            title: e.target.value
+                          }
+                        }
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      placeholder="Enter game title..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Game Description
+                    </label>
+                    <input
+                      type="text"
+                      value={content.gameCustomization?.flowerGardenGame?.description || ""}
+                      onChange={(e) => setContent({
+                        ...content,
+                        gameCustomization: {
+                          ...content.gameCustomization,
+                          flowerGardenGame: {
+                            ...content.gameCustomization?.flowerGardenGame,
+                            description: e.target.value
+                          }
+                        }
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      placeholder="Enter game description..."
+                    />
+                  </div>
+                                     <div className="grid grid-cols-2 gap-3">
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-1">
+                         Starting Water Level
+                       </label>
+                       <input
+                         type="number"
+                         value={content.gameCustomization?.flowerGardenGame?.waterLevel || 10}
+                         onChange={(e) => setContent({
+                           ...content,
+                           gameCustomization: {
+                             ...content.gameCustomization,
+                             flowerGardenGame: {
+                               ...content.gameCustomization?.flowerGardenGame,
+                               waterLevel: parseInt(e.target.value) || 10
+                             }
+                           }
+                         })}
+                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                         placeholder="Water level..."
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-1">
+                         Garden Grid Size
+                       </label>
+                       <input
+                         type="number"
+                         value={content.gameCustomization?.flowerGardenGame?.gridSize || 6}
+                         onChange={(e) => setContent({
+                           ...content,
+                           gameCustomization: {
+                             ...content.gameCustomization,
+                             flowerGardenGame: {
+                               ...content.gameCustomization?.flowerGardenGame,
+                               gridSize: parseInt(e.target.value) || 6
+                             }
+                           }
+                         })}
+                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                         placeholder="Grid size..."
+                       />
+                     </div>
+                   </div>
+                   
+                                       {/* Celebration Message */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        🎉 Celebration Message
+                      </label>
+                      <textarea
+                        value={content.gameCustomization?.flowerGardenGame?.celebrationMessage || ""}
+                        onChange={(e) => setContent({
+                          ...content,
+                          gameCustomization: {
+                            ...content.gameCustomization,
+                            flowerGardenGame: {
+                              ...content.gameCustomization?.flowerGardenGame,
+                              celebrationMessage: e.target.value
+                            }
+                          }
+                        })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        placeholder="Message shown when player completes the game..."
+                        rows={3}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        This message will appear in a big heart when someone wins the game! 🌺
+                      </p>
+                    </div>
+                    
+                    {/* Game Reset Control */}
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium text-red-800 text-sm">🔄 Game Reset Control</h4>
+                          <p className="text-xs text-red-600 mt-1">
+                            Reset this game's completion status for all users
+                          </p>
+                        </div>
+                        <button
+                                                     onClick={() => {
+                             if (confirm('⚠️ Are you sure you want to reset the Flower Garden Game for ALL users? This will clear their completion status and they will need to play again to earn hearts.')) {
+                               // Reset the game by updating localStorage and content
+                               const currentContent = JSON.parse(localStorage.getItem('websiteContent') || '{}');
+                               if (currentContent.gameStats) {
+                                 currentContent.gameStats.flowerGardenCompleted = false;
+                                 localStorage.setItem('websiteContent', JSON.stringify(currentContent));
+                                 
+                                 // Also update the current content state to ensure it persists
+                                 const updatedContent = { ...content };
+                                                                   if (!updatedContent.gameStats) {
+                                    updatedContent.gameStats = {
+                                      memoryCardCompleted: false,
+                                      loveSongCompleted: false,
+                                      flowerGardenCompleted: false,
+                                      catchTheKittyCompleted: false,
+                                      quizCompleted: false,
+                                      gamesPlayed: 0,
+                                      daysActive: 0,
+                                      totalHearts: 0,
+                                    };
+                                  }
+                                  updatedContent.gameStats.flowerGardenCompleted = false;
+                                 setContent(updatedContent);
+                                 
+                                 // Save to Firebase if available
+                                 if (isFirebaseAvailable()) {
+                                   saveContentWithCompression(updatedContent);
+                                 }
+                                 
+                                 alert('✅ Flower Garden Game has been reset for all users!');
+                               }
+                             }
+                           }}
+                          className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
+                        >
+                          Reset Game
+                        </button>
+                      </div>
+                    </div>
+                 </div>
+               </div>
+
+                             {/* Quiz Game */}
+               <div className="bg-gray-50 p-4 rounded-lg">
+                 <h3 className="text-lg font-semibold text-gray-800 mb-3">🧠 Quiz Game</h3>
+                                   <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        🎉 Celebration Message
+                      </label>
+                      <textarea
+                        value={content.gameCustomization?.quizGame?.celebrationMessage || ""}
+                        onChange={(e) => setContent({
+                          ...content,
+                          gameCustomization: {
+                            ...content.gameCustomization,
+                            quizGame: {
+                              ...content.gameCustomization?.quizGame,
+                              celebrationMessage: e.target.value
+                            }
+                          }
+                        })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Message shown when player completes the quiz..."
+                        rows={3}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        This message will appear in a big heart when someone wins the quiz! 🧠
+                      </p>
+                    </div>
+                    
+                    {/* Game Reset Control */}
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium text-red-800 text-sm">🔄 Game Reset Control</h4>
+                          <p className="text-xs text-red-600 mt-1">
+                            Reset this game's completion status for all users
+                          </p>
+                        </div>
+                        <button
+                                                     onClick={() => {
+                             if (confirm('⚠️ Are you sure you want to reset the Quiz Game for ALL users? This will clear their completion status and they will need to play again to earn hearts.')) {
+                               // Reset the game by updating localStorage and content
+                               const currentContent = JSON.parse(localStorage.getItem('websiteContent') || '{}');
+                               if (currentContent.gameStats) {
+                                 currentContent.gameStats.quizCompleted = false;
+                                 localStorage.setItem('websiteContent', JSON.stringify(currentContent));
+                                 
+                                 // Also update the current content state to ensure it persists
+                                 const updatedContent = { ...content };
+                                                                   if (!updatedContent.gameStats) {
+                                    updatedContent.gameStats = {
+                                      memoryCardCompleted: false,
+                                      loveSongCompleted: false,
+                                      flowerGardenCompleted: false,
+                                      catchTheKittyCompleted: false,
+                                      quizCompleted: false,
+                                      gamesPlayed: 0,
+                                      daysActive: 0,
+                                      totalHearts: 0,
+                                    };
+                                  }
+                                  updatedContent.gameStats.quizCompleted = false;
+                                 setContent(updatedContent);
+                                 
+                                 // Save to Firebase if available
+                                 if (isFirebaseAvailable()) {
+                                   saveContentWithCompression(updatedContent);
+                                 }
+                                 
+                                 alert('✅ Quiz Game has been reset for all users!');
+                               }
+                             }
+                           }}
+                          className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
+                        >
+                          Reset Game
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+               </div>
+
+               {/* Catch the Kitty Game */}
+               <div className="bg-gray-50 p-4 rounded-lg">
+                 <h3 className="text-lg font-semibold text-gray-800 mb-3">🐱 Catch the Kitty Game</h3>
+                 <div className="space-y-3">
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                       Game Title
+                     </label>
+                     <input
+                       type="text"
+                       value={content.gameCustomization?.catchTheKittyGame?.title || ""}
+                       onChange={(e) => setContent({
+                         ...content,
+                         gameCustomization: {
+                           ...content.gameCustomization,
+                           catchTheKittyGame: {
+                             ...content.gameCustomization?.catchTheKittyGame,
+                             title: e.target.value
+                           }
+                         }
+                       })}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                       placeholder="Enter game title..."
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                       Game Description
+                     </label>
+                     <input
+                       type="text"
+                       value={content.gameCustomization?.catchTheKittyGame?.description || ""}
+                       onChange={(e) => setContent({
+                         ...content,
+                         gameCustomization: {
+                           ...content.gameCustomization,
+                           catchTheKittyGame: {
+                             ...content.gameCustomization?.catchTheKittyGame,
+                             description: e.target.value
+                           }
+                         }
+                       })}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                       placeholder="Enter game description..."
+                     />
+                   </div>
+                   <div className="grid grid-cols-2 gap-3">
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-1">
+                         Number of Kitties
+                       </label>
+                       <input
+                         type="number"
+                         value={content.gameCustomization?.catchTheKittyGame?.numberOfKitties || 10}
+                         onChange={(e) => setContent({
+                           ...content,
+                           gameCustomization: {
+                             ...content.gameCustomization,
+                             catchTheKittyGame: {
+                               ...content.gameCustomization?.catchTheKittyGame,
+                               numberOfKitties: parseInt(e.target.value) || 10
+                             }
+                           }
+                         })}
+                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                         placeholder="Number of kitties..."
+                         min="1"
+                         max="20"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-1">
+                         Fall Speed
+                       </label>
+                       <input
+                         type="number"
+                         value={content.gameCustomization?.catchTheKittyGame?.fallSpeed || 2}
+                         onChange={(e) => setContent({
+                           ...content,
+                           gameCustomization: {
+                             ...content.gameCustomization,
+                             catchTheKittyGame: {
+                               ...content.gameCustomization?.catchTheKittyGame,
+                               fallSpeed: parseFloat(e.target.value) || 2
+                             }
+                           }
+                         })}
+                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                         placeholder="Fall speed..."
+                         min="0.5"
+                         max="5"
+                         step="0.1"
+                       />
+                     </div>
+                   </div>
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                       Hearts Reward
+                     </label>
+                     <input
+                       type="number"
+                       value={content.gameCustomization?.catchTheKittyGame?.heartsReward || 15}
+                       onChange={(e) => setContent({
+                         ...content,
+                         gameCustomization: {
+                           ...content.gameCustomization,
+                           catchTheKittyGame: {
+                             ...content.gameCustomization?.catchTheKittyGame,
+                             heartsReward: parseInt(e.target.value) || 15
+                           }
+                         }
+                       })}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                       placeholder="Hearts reward..."
+                       min="1"
+                       max="50"
+                     />
+                   </div>
+                   
+                   {/* Custom Kitty Images */}
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                       🐱 Custom Kitty Images (Optional)
+                     </label>
+                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-purple-400 transition-colors">
+                       <div className="space-y-2">
+                         <p className="text-sm text-gray-600">
+                           Upload custom kitty images to make the game more personal! 🎨
+                         </p>
+                         <p className="text-xs text-gray-500">
+                           Any image size accepted! Automatically compressed to ~200KB for optimal performance.
+                         </p>
+                         <p className="text-xs text-gray-500">
+                           Current images: {content.gameCustomization?.catchTheKittyGame?.customImages?.length || 0}/10
+                         </p>
+                         
+                         {/* Image Preview Grid */}
+                         {content.gameCustomization?.catchTheKittyGame?.customImages && 
+                          content.gameCustomization.catchTheKittyGame.customImages.length > 0 && (
+                           <div className="grid grid-cols-3 gap-2 mt-3">
+                             {content.gameCustomization.catchTheKittyGame.customImages.map((image, index) => (
+                               <div key={index} className="relative group">
+                                 <img
+                                   src={image}
+                                   alt={`Kitty ${index + 1}`}
+                                   className="w-full h-16 object-cover rounded border border-gray-200"
+                                 />
+                                 <button
+                                   onClick={() => {
+                                     const updatedImages = content.gameCustomization?.catchTheKittyGame?.customImages?.filter((_, i) => i !== index) || [];
+                                     setContent({
+                                       ...content,
+                                       gameCustomization: {
+                                         ...content.gameCustomization,
+                                         catchTheKittyGame: {
+                                           ...content.gameCustomization?.catchTheKittyGame,
+                                           customImages: updatedImages
+                                         }
+                                       }
+                                     });
+                                   }}
+                                   className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                 >
+                                   ×
+                                 </button>
+                               </div>
+                             ))}
+                           </div>
+                         )}
+                         
+                         <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-2">
+                           <input
+                             type="file"
+                             accept="image/*"
+                             multiple
+                             onChange={(e) => {
+                               try {
+                                 const files = e.target?.files;
+                                 if (files && files.length > 0) {
+                                   const fileArray = Array.from(files);
+                                   handleMultipleKittyImageUpload(fileArray);
+                                 }
+                               } catch (error) {
+                                 console.error('Error handling kitty image upload:', error);
+                                 alert('❌ Error uploading kitty images. Please try again.');
+                               }
+                             }}
+                             className="hidden"
+                             id="kitty-image-upload"
+                           />
+                           <label
+                             htmlFor="kitty-image-upload"
+                             className="cursor-pointer bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+                           >
+                             <span>📁 Choose Images</span>
+                           </label>
+                           <span className="text-sm text-gray-500">or drag & drop here</span>
+                         </div>
+                         
+                         <div
+                           className="mt-2 p-2 bg-purple-50 border border-purple-200 rounded text-xs text-purple-700"
+                           onDragOver={(e) => {
+                             e.preventDefault();
+                             e.currentTarget.classList.add('border-purple-400', 'bg-purple-100');
+                           }}
+                           onDragLeave={(e) => {
+                             e.currentTarget.classList.remove('border-purple-400', 'bg-purple-100');
+                           }}
+                           onDrop={(e) => {
+                             try {
+                               e.preventDefault();
+                               e.currentTarget.classList.remove('border-purple-400', 'bg-purple-100');
+                               const files = e.dataTransfer?.files;
+                               if (files && files.length > 0) {
+                                 const fileArray = Array.from(files);
+                                 handleMultipleKittyImageUpload(fileArray);
+                               }
+                             } catch (error) {
+                               console.error('Error handling kitty image drop:', error);
+                               alert('❌ Error uploading kitty images. Please try again.');
+                             }
+                           }}
+                         >
+                           🐱 Drop kitty images here to upload them instantly!
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                   
+                   {/* Celebration Message */}
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                       🎉 Celebration Message
+                     </label>
+                     <textarea
+                       value={content.gameCustomization?.catchTheKittyGame?.celebrationMessage || ""}
+                       onChange={(e) => setContent({
+                         ...content,
+                         gameCustomization: {
+                           ...content.gameCustomization,
+                           catchTheKittyGame: {
+                             ...content.gameCustomization?.catchTheKittyGame,
+                             celebrationMessage: e.target.value
+                           }
+                         }
+                       })}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                       placeholder="Message shown when player completes the game..."
+                       rows={3}
+                     />
+                     <p className="text-xs text-gray-500 mt-1">
+                       This message will appear in a big heart when someone wins the game! 🐱
+                     </p>
+                   </div>
+                   
+                   {/* Game Reset Control */}
+                   <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                     <div className="flex items-center justify-between">
+                       <div>
+                         <h4 className="font-medium text-red-800 text-sm">🔄 Game Reset Control</h4>
+                         <p className="text-xs text-red-600 mt-1">
+                           Reset this game's completion status for all users
+                         </p>
+                       </div>
+                       <button
+                         onClick={() => {
+                           if (confirm('⚠️ Are you sure you want to reset the Catch the Kitty Game for ALL users? This will clear their completion status and they will need to play again to earn hearts.')) {
+                             // Reset the game by updating localStorage and content
+                             const currentContent = JSON.parse(localStorage.getItem('websiteContent') || '{}');
+                             if (currentContent.gameStats) {
+                               currentContent.gameStats.catchTheKittyCompleted = false;
+                               localStorage.setItem('websiteContent', JSON.stringify(currentContent));
+                               
+                               // Also update the current content state to ensure it persists
+                               const updatedContent = { ...content };
+                               if (!updatedContent.gameStats) {
+                                 updatedContent.gameStats = {
+                                   memoryCardCompleted: false,
+                                   loveSongCompleted: false,
+                                   flowerGardenCompleted: false,
+                                   catchTheKittyCompleted: false,
+                                   quizCompleted: false,
+                                   gamesPlayed: 0,
+                                   daysActive: 0,
+                                   totalHearts: 0,
+                                 };
+                               }
+                               updatedContent.gameStats.catchTheKittyCompleted = false;
+                               setContent(updatedContent);
+                               
+                               // Save to Firebase if available
+                               if (isFirebaseAvailable()) {
+                                 saveContentWithCompression(updatedContent);
+                               }
+                               
+                               alert('✅ Catch the Kitty Game has been reset for all users!');
+                             }
+                           }
+                         }}
+                         className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
+                       >
+                         Reset Game
+                       </button>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+               {/* Achievement System */}
+               <div className="bg-gray-50 p-4 rounded-lg">
+                 <h3 className="text-lg font-semibold text-gray-800 mb-3">🏆 Achievement System</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      System Title
+                    </label>
+                    <input
+                      type="text"
+                      value={content.gameCustomization?.achievementSystem?.title || ""}
+                      onChange={(e) => setContent({
+                        ...content,
+                        gameCustomization: {
+                          ...content.gameCustomization,
+                          achievementSystem: {
+                            ...content.gameCustomization?.achievementSystem,
+                            title: e.target.value
+                          }
+                        }
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                      placeholder="Enter system title..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      System Description
+                    </label>
+                    <input
+                      type="text"
+                      value={content.gameCustomization?.achievementSystem?.description || ""}
+                      onChange={(e) => setContent({
+                        ...content,
+                        gameCustomization: {
+                          ...content.gameCustomization,
+                          achievementSystem: {
+                             ...content.gameCustomization?.achievementSystem,
+                             title: e.target.value
+                           }
+                         }
+                       })}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                       placeholder="Enter system description..."
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                       Celebration Message
+                     </label>
+                     <textarea
+                       value={content.gameCustomization?.achievementSystem?.celebrationMessage || ""}
+                       onChange={(e) => setContent({
+                         ...content,
+                         gameCustomization: {
+                           ...content.gameCustomization,
+                           achievementSystem: {
+                             ...content.gameCustomization?.achievementSystem,
+                             celebrationMessage: e.target.value
+                           }
+                         }
+                       })}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                       placeholder="Enter celebration message..."
+                       rows={3}
+                     />
+                   </div>
+                 </div>
+               </div>
             </div>
           )}
         </div>
