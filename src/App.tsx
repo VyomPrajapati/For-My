@@ -12,6 +12,11 @@ import ScrollReveal from './components/ScrollReveal';
 import CustomizationPanel from './components/CustomizationPanel';
 import LoginModal from './components/LoginModal';
 import UserInfo from './components/UserInfo';
+
+// New Customization Components
+import CustomizationSystem from './components/CustomizationSystem';
+import LoveNotesSystem from './components/LoveNotesSystem';
+import LoveGarden from './components/LoveGarden';
 import { 
   WebsiteContent, 
   defaultContent, 
@@ -219,6 +224,11 @@ function App() {
   const [isKaleshiAuratUser, setIsKaleshiAuratUser] = useState<boolean>(isKaleshiAurat());
   const [currentUser, setCurrentUser] = useState<any>(getCurrentUser());
 
+  // Customization System State
+  const [currentTheme, setCurrentTheme] = useState<any>(null);
+  const [customEmojis, setCustomEmojis] = useState<string[]>([]);
+  const [messageTemplates, setMessageTemplates] = useState<string[]>([]);
+
   // Key to force re-render when login status changes
   const appKey = `app-${isLoggedIn ? 'logged-in' : 'logged-out'}`;
 
@@ -249,6 +259,32 @@ function App() {
     setCelebrationMessage(message);
     setShowCelebration(true);
   };
+
+     // Theme change handler
+   const handleThemeChange = useCallback((theme: any) => {
+     setCurrentTheme(theme);
+     // Apply theme to document and body
+     if (theme?.colors) {
+       document.documentElement.style.setProperty('--primary-color', theme.colors.primary);
+       document.documentElement.style.setProperty('--secondary-color', theme.colors.secondary);
+       document.documentElement.style.setProperty('--accent-color', theme.colors.accent);
+       document.documentElement.style.setProperty('--background-color', theme.colors.background);
+       document.documentElement.style.setProperty('--text-color', theme.colors.text);
+       
+       // Apply theme to body for immediate visual feedback
+       document.body.style.backgroundColor = theme.colors.background;
+       document.body.style.color = theme.colors.text;
+       
+       // Apply theme to main content areas
+       const mainElements = document.querySelectorAll('main, .main-content, .content');
+       mainElements.forEach(element => {
+         if (element instanceof HTMLElement) {
+           element.style.backgroundColor = theme.colors.background;
+           element.style.color = theme.colors.text;
+         }
+       });
+     }
+   }, []);
 
   // Function to update game stats and save to content
   const updateGameStats = useCallback((gameType: 'memoryCard' | 'flowerGarden' | 'heartShooter' | 'quiz', completed: boolean) => {
@@ -410,6 +446,53 @@ function App() {
       // Cleanup
     };
   }, [websiteContent.customMusic]); // Re-run when custom music changes
+
+  // Apply theme to existing elements when theme changes
+  useEffect(() => {
+    if (currentTheme?.colors) {
+      // Apply theme to all existing elements
+      const applyThemeToElements = () => {
+        // Apply to cards and panels
+        const cards = document.querySelectorAll('.comic-panel, .bg-white, .bg-gray-50');
+        cards.forEach(card => {
+          if (card instanceof HTMLElement) {
+            card.style.backgroundColor = currentTheme.colors.accent;
+            card.style.borderColor = currentTheme.colors.primary;
+            card.style.color = currentTheme.colors.text;
+          }
+        });
+
+        // Apply to buttons
+        const buttons = document.querySelectorAll('button');
+        buttons.forEach(button => {
+          if (button instanceof HTMLElement) {
+            if (button.classList.contains('bg-pink-500') || button.classList.contains('bg-pink-600')) {
+              button.style.backgroundColor = currentTheme.colors.primary;
+            }
+            if (button.classList.contains('bg-blue-500') || button.classList.contains('bg-blue-600')) {
+              button.style.backgroundColor = currentTheme.colors.secondary;
+            }
+          }
+        });
+
+        // Apply to text elements
+        const textElements = document.querySelectorAll('h1, h2, h3, p, span');
+        textElements.forEach(element => {
+          if (element instanceof HTMLElement) {
+            if (element.classList.contains('text-pink-600')) {
+              element.style.color = currentTheme.colors.primary;
+            }
+            if (element.classList.contains('text-blue-600')) {
+              element.style.color = currentTheme.colors.secondary;
+            }
+          }
+        });
+      };
+
+      // Apply theme after a short delay to ensure DOM is ready
+      setTimeout(applyThemeToElements, 100);
+    }
+  }, [currentTheme]);
 
   const toggleMusic = async () => {
     try {
@@ -598,7 +681,14 @@ function App() {
   }));
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-pink-50 p-4 md:p-8 cursor-pointer relative overflow-hidden" onClick={addHeart}>
+    <div 
+      className="min-h-screen bg-gradient-to-b from-blue-50 to-pink-50 p-4 md:p-8 cursor-pointer relative overflow-hidden transition-all duration-300" 
+      onClick={addHeart}
+      style={{
+        backgroundColor: currentTheme?.colors?.background || '#F0F8FF',
+        color: currentTheme?.colors?.text || '#2C1810'
+      }}
+    >
       {/* Floating Hearts */}
       {hearts.map((heart) => (
         <motion.div
@@ -652,6 +742,8 @@ function App() {
         )}
       </div>
 
+
+
       {/* Main Content */}
       <div className="max-w-4xl mx-auto space-y-8 md:space-y-16 px-4 md:px-8">
         <ScrollReveal animation="fade" duration={0.8}>
@@ -662,6 +754,8 @@ function App() {
             <p className="text-sm md:text-base text-gray-600 font-comic">
               {safeWebsiteContent.subtitle || "Add your subtitle here..."}
             </p>
+            
+
           </div>
         </ScrollReveal>
 
@@ -1124,6 +1218,26 @@ function App() {
           setIsKaleshiAuratUser(false);
           setCurrentUser(null);
         }}
+      />
+
+      {/* Customization System - Always visible but admin controls */}
+      <CustomizationSystem
+        isAdmin={isKaleshiAuratUser}
+        onThemeChange={handleThemeChange}
+      />
+
+      {/* Love Notes System - Available to all users */}
+      <LoveNotesSystem
+        messageTemplates={messageTemplates}
+        customEmojis={customEmojis}
+        theme={currentTheme}
+        isAdmin={isKaleshiAuratUser}
+      />
+
+      {/* Love Garden - Available to all users */}
+      <LoveGarden
+        theme={currentTheme}
+        customEmojis={customEmojis}
       />
     </div>
   );

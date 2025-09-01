@@ -4,6 +4,71 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CSS Variables for Theme System */
+:root {
+  --primary-color: #FF6B9D;
+  --secondary-color: #C44569;
+  --accent-color: #FFE0E9;
+  --background-color: #FFF0F5;
+  --text-color: #2C1810;
+}
+
+/* Theme-aware utility classes */
+.bg-theme-primary { background-color: var(--primary-color); }
+.bg-theme-secondary { background-color: var(--secondary-color); }
+.bg-theme-accent { background-color: var(--accent-color); }
+.bg-theme-background { background-color: var(--background-color); }
+.text-theme-text { color: var(--text-color); }
+.text-theme-primary { color: var(--primary-color); }
+.text-theme-secondary { color: var(--secondary-color); }
+.border-theme-primary { border-color: var(--primary-color); }
+.border-theme-secondary { border-color: var(--secondary-color); }
+
+/* Apply theme colors to main elements */
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  transition: all 0.3s ease;
+}
+
+/* Theme-aware button styles */
+.btn-theme-primary {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.btn-theme-secondary {
+  background-color: var(--secondary-color);
+  color: white;
+  border-color: var(--secondary-color);
+}
+
+.btn-theme-accent {
+  background-color: var(--accent-color);
+  color: var(--text-color);
+  border-color: var(--accent-color);
+}
+
+/* Theme-aware card styles */
+.card-theme {
+  background-color: var(--accent-color);
+  border-color: var(--primary-color);
+  color: var(--text-color);
+}
+
+/* Theme-aware input styles */
+.input-theme {
+  background-color: var(--accent-color);
+  border-color: var(--primary-color);
+  color: var(--text-color);
+}
+
+.input-theme:focus {
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 0 2px var(--accent-color);
+}
+
 /* Hide scrollbar but keep functionality */
 ::-webkit-scrollbar {
   display: none;

@@ -57,6 +57,7 @@ interface GameState {
   gamePhase: 'playing' | 'gameOver';
   level: number;
   wave: number;
+  hasStartedPlaying: boolean;
 }
 
 const HeartShooter: React.FC<HeartShooterProps> = ({
@@ -82,7 +83,8 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
     popEffects: [],
     gamePhase: 'playing',
     level: 1,
-    wave: 1
+    wave: 1,
+    hasStartedPlaying: false
   });
 
   const gameRef = useRef<HTMLDivElement>(null);
@@ -213,11 +215,14 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
     }));
   }, [bulletSpeed]);
 
-  // Update pop effects
+  // Update pop effects with automatic cleanup
   const updatePopEffects = useCallback(() => {
     setGameState(prev => ({
       ...prev,
-      popEffects: prev.popEffects.filter(effect => effect.isActive)
+      popEffects: prev.popEffects.map(effect => ({
+        ...effect,
+        isActive: effect.isActive && Date.now() - parseInt(effect.id.split('-')[1]) < 800
+      })).filter(effect => effect.isActive)
     }));
   }, []);
 
@@ -248,7 +253,7 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
           const collisionRadius = target.size / 2;
 
           if (distance < collisionRadius) {
-            // Hit! Create pop effect
+            // Hit! Create pop effect with timestamp
             const popEffect: PopEffect = {
               id: `pop-${Date.now()}-${Math.random()}`,
               x: target.x,
@@ -318,7 +323,8 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
 
     setGameState(prev => ({
       ...prev,
-      bullets: [...prev.bullets, bullet]
+      bullets: [...prev.bullets, bullet],
+      hasStartedPlaying: true // Mark that user has started playing
     }));
   }, [gameState.gamePhase]);
 
@@ -397,6 +403,21 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
       }
     };
   }, [gameState.combo]);
+
+  // Clean up old pop effects
+  useEffect(() => {
+    const cleanupInterval = setInterval(() => {
+      setGameState(prev => ({
+        ...prev,
+        popEffects: prev.popEffects.filter(effect => {
+          const timestamp = parseInt(effect.id.split('-')[1]);
+          return Date.now() - timestamp < 1000; // Remove effects older than 1 second
+        })
+      }));
+    }, 500);
+
+    return () => clearInterval(cleanupInterval);
+  }, []);
 
   // Handle game completion
   useEffect(() => {
@@ -532,7 +553,7 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
                   y: [0, -30]
                 }}
                 exit={{ scale: 0, opacity: 0 }}
-                transition={{ duration: 0.8 }}
+                transition={{ duration: 0.6 }}
                 className="absolute pointer-events-none"
                 style={{
                   left: effect.x,
@@ -540,6 +561,7 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
                   transform: 'translate(-50%, -50%)'
                 }}
                 onAnimationComplete={() => {
+                  // Mark effect as inactive after animation completes
                   setGameState(prev => ({
                     ...prev,
                     popEffects: prev.popEffects.map(e => 
@@ -580,7 +602,7 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
           )}
 
           {/* Instructions */}
-          {gameState.gamePhase === 'playing' && gameState.targets.length === 0 && (
+          {gameState.gamePhase === 'playing' && !gameState.hasStartedPlaying && gameState.targets.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="bg-white bg-opacity-90 rounded-lg p-6 text-center">
                 <h3 className="text-xl font-bold mb-2">How to Play</h3>
