@@ -10,6 +10,9 @@ interface HeartShooterProps {
   celebrationMessage?: string;
   gameDuration?: number;
   difficulty?: 'easy' | 'medium' | 'hard';
+  bulletSpeed?: number;
+  heartSpawnRate?: number;
+  comboMultiplier?: number;
 }
 
 interface HeartTarget {
@@ -34,6 +37,15 @@ interface Bullet {
   isActive: boolean;
 }
 
+interface PopEffect {
+  id: string;
+  x: number;
+  y: number;
+  type: string;
+  points: number;
+  isActive: boolean;
+}
+
 interface GameState {
   score: number;
   heartsEarned: number;
@@ -41,6 +53,7 @@ interface GameState {
   combo: number;
   targets: HeartTarget[];
   bullets: Bullet[];
+  popEffects: PopEffect[];
   gamePhase: 'playing' | 'gameOver';
   level: number;
   wave: number;
@@ -54,7 +67,10 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
   heartsReward = 20,
   celebrationMessage = "🎯 Amazing shooting! You've hit all the hearts! 💘",
   gameDuration = 90,
-  difficulty = 'medium'
+  difficulty = 'medium',
+  bulletSpeed = 15,
+  heartSpawnRate = 3000,
+  comboMultiplier = 5
 }) => {
   const [gameState, setGameState] = useState<GameState>({
     score: 0,
@@ -63,6 +79,7 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
     combo: 0,
     targets: [],
     bullets: [],
+    popEffects: [],
     gamePhase: 'playing',
     level: 1,
     wave: 1
@@ -75,11 +92,11 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
 
   // Heart type configurations
   const heartTypes = {
-    red: { emoji: '🔴', points: 10, heartsReward: 1, probability: 0.4, size: 40 },
-    pink: { emoji: '💖', points: 25, heartsReward: 2, probability: 0.3, size: 45 },
-    golden: { emoji: '💝', points: 50, heartsReward: 5, probability: 0.2, size: 50 },
-    diamond: { emoji: '💎', points: 100, heartsReward: 10, probability: 0.08, size: 55 },
-    broken: { emoji: '💔', points: -20, heartsReward: -1, probability: 0.02, size: 35 }
+    red: { emoji: '🔴', points: 10, heartsReward: 1, probability: 0.4, size: 40, color: 'text-red-500' },
+    pink: { emoji: '💖', points: 25, heartsReward: 2, probability: 0.3, size: 45, color: 'text-pink-500' },
+    golden: { emoji: '💝', points: 50, heartsReward: 5, probability: 0.2, size: 50, color: 'text-yellow-500' },
+    diamond: { emoji: '💎', points: 100, heartsReward: 10, probability: 0.08, size: 55, color: 'text-blue-500' },
+    broken: { emoji: '💔', points: -20, heartsReward: -1, probability: 0.02, size: 35, color: 'text-gray-500' }
   };
 
   // Generate random heart
@@ -184,9 +201,8 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
           return { ...bullet, isActive: false };
         }
         
-        const speed = 15;
-        const newX = bullet.x + (dx / distance) * speed;
-        const newY = bullet.y + (dy / distance) * speed;
+        const newX = bullet.x + (dx / distance) * bulletSpeed;
+        const newY = bullet.y + (dy / distance) * bulletSpeed;
         
         return {
           ...bullet,
@@ -195,18 +211,27 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
         };
       }).filter(bullet => bullet.isActive)
     }));
+  }, [bulletSpeed]);
+
+  // Update pop effects
+  const updatePopEffects = useCallback(() => {
+    setGameState(prev => ({
+      ...prev,
+      popEffects: prev.popEffects.filter(effect => effect.isActive)
+    }));
   }, []);
 
-  // Check collisions
+  // Check collisions with improved precision
   const checkCollisions = useCallback(() => {
     setGameState(prev => {
       const newBullets = [...prev.bullets];
       const newTargets = [...prev.targets];
+      const newPopEffects = [...prev.popEffects];
       let newScore = prev.score;
       let newHeartsEarned = prev.heartsEarned;
       let newCombo = prev.combo;
 
-      // Check each bullet against each target
+      // Check each bullet against each target with precise collision detection
       for (let i = newBullets.length - 1; i >= 0; i--) {
         const bullet = newBullets[i];
         if (!bullet.isActive) continue;
@@ -214,12 +239,28 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
         for (let j = newTargets.length - 1; j >= 0; j--) {
           const target = newTargets[j];
           
+          // More precise collision detection
           const distance = Math.sqrt(
             Math.pow(bullet.x - target.x, 2) + Math.pow(bullet.y - target.y, 2)
           );
 
-          if (distance < target.size / 2) {
-            // Hit!
+          // Use target size for collision radius (more precise)
+          const collisionRadius = target.size / 2;
+
+          if (distance < collisionRadius) {
+            // Hit! Create pop effect
+            const popEffect: PopEffect = {
+              id: `pop-${Date.now()}-${Math.random()}`,
+              x: target.x,
+              y: target.y,
+              type: target.type,
+              points: target.points,
+              isActive: true
+            };
+
+            newPopEffects.push(popEffect);
+
+            // Update score and combo
             newScore += target.points;
             newHeartsEarned += target.heartsReward;
             newCombo += 1;
@@ -230,7 +271,7 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
             
             // Add combo bonus
             if (newCombo > 1) {
-              const comboBonus = Math.floor(newCombo / 3) * 5;
+              const comboBonus = Math.floor(newCombo / 3) * comboMultiplier;
               newScore += comboBonus;
             }
             
@@ -243,12 +284,13 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
         ...prev,
         bullets: newBullets,
         targets: newTargets,
+        popEffects: newPopEffects,
         score: newScore,
         heartsEarned: newHeartsEarned,
         combo: newCombo
       };
     });
-  }, []);
+  }, [comboMultiplier]);
 
   // Handle shooting
   const handleShoot = useCallback((e: React.MouseEvent) => {
@@ -285,6 +327,7 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
     const gameLoop = () => {
       updateHearts();
       updateBullets();
+      updatePopEffects();
       checkCollisions();
       animationRef.current = requestAnimationFrame(gameLoop);
     };
@@ -298,7 +341,7 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [updateHearts, updateBullets, checkCollisions, gameState.gamePhase]);
+  }, [updateHearts, updateBullets, updatePopEffects, checkCollisions, gameState.gamePhase]);
 
   // Timer
   useEffect(() => {
@@ -331,10 +374,10 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
           wave: newWave
         };
       });
-    }, 3000);
+    }, heartSpawnRate);
 
     return () => clearInterval(spawnInterval);
-  }, [spawnHearts]);
+  }, [spawnHearts, heartSpawnRate]);
 
   // Combo timeout
   useEffect(() => {
@@ -473,6 +516,44 @@ const HeartShooter: React.FC<HeartShooterProps> = ({
                 }}
               >
                 <div className="text-lg">💕</div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+
+          {/* Pop Effects */}
+          <AnimatePresence>
+            {gameState.popEffects.map(effect => (
+              <motion.div
+                key={effect.id}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ 
+                  scale: [0, 1.5, 1],
+                  opacity: [0, 1, 0],
+                  y: [0, -30]
+                }}
+                exit={{ scale: 0, opacity: 0 }}
+                transition={{ duration: 0.8 }}
+                className="absolute pointer-events-none"
+                style={{
+                  left: effect.x,
+                  top: effect.y,
+                  transform: 'translate(-50%, -50%)'
+                }}
+                onAnimationComplete={() => {
+                  setGameState(prev => ({
+                    ...prev,
+                    popEffects: prev.popEffects.map(e => 
+                      e.id === effect.id ? { ...e, isActive: false } : e
+                    )
+                  }));
+                }}
+              >
+                <div className="text-center">
+                  <div className="text-2xl mb-1">💥</div>
+                  <div className={`text-sm font-bold ${heartTypes[effect.type as keyof typeof heartTypes]?.color || 'text-gray-600'}`}>
+                    +{effect.points}
+                  </div>
+                </div>
               </motion.div>
             ))}
           </AnimatePresence>

@@ -1009,6 +1009,9 @@ function App() {
           celebrationMessage={safeWebsiteContent.gameCustomization?.heartShooterGame?.celebrationMessage}
           gameDuration={safeWebsiteContent.gameCustomization?.heartShooterGame?.gameDuration}
           difficulty={safeWebsiteContent.gameCustomization?.heartShooterGame?.difficulty}
+          bulletSpeed={safeWebsiteContent.gameCustomization?.heartShooterGame?.bulletSpeed}
+          heartSpawnRate={safeWebsiteContent.gameCustomization?.heartShooterGame?.heartSpawnRate}
+          comboMultiplier={safeWebsiteContent.gameCustomization?.heartShooterGame?.comboMultiplier}
         />
       )}
 

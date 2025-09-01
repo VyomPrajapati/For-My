@@ -1890,7 +1890,274 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                  </div>
                </div>
 
-                             {/* Quiz Game */}
+               {/* Heart Shooter Game */}
+               <div className="bg-gray-50 p-4 rounded-lg">
+                 <h3 className="text-lg font-semibold text-gray-800 mb-3">🏹 Heart Shooter Game</h3>
+                 <div className="space-y-3">
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                       Game Title
+                     </label>
+                     <input
+                       type="text"
+                       value={content.gameCustomization?.heartShooterGame?.title || ""}
+                       onChange={(e) => setContent({
+                         ...content,
+                         gameCustomization: {
+                           ...content.gameCustomization,
+                           heartShooterGame: {
+                             ...content.gameCustomization?.heartShooterGame,
+                             title: e.target.value
+                           }
+                         }
+                       })}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                       placeholder="Enter game title..."
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                       Game Description
+                     </label>
+                     <input
+                       type="text"
+                       value={content.gameCustomization?.heartShooterGame?.description || ""}
+                       onChange={(e) => setContent({
+                         ...content,
+                         gameCustomization: {
+                           ...content.gameCustomization,
+                           heartShooterGame: {
+                             ...content.gameCustomization?.heartShooterGame,
+                             description: e.target.value
+                           }
+                         }
+                       })}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                       placeholder="Enter game description..."
+                     />
+                   </div>
+                   <div className="grid grid-cols-2 gap-3">
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-1">
+                         Game Duration (seconds)
+                       </label>
+                       <input
+                         type="number"
+                         value={content.gameCustomization?.heartShooterGame?.gameDuration || 90}
+                         onChange={(e) => setContent({
+                           ...content,
+                           gameCustomization: {
+                             ...content.gameCustomization,
+                             heartShooterGame: {
+                               ...content.gameCustomization?.heartShooterGame,
+                               gameDuration: parseInt(e.target.value) || 90
+                             }
+                           }
+                         })}
+                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                         placeholder="Game duration..."
+                         min="30"
+                         max="300"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-1">
+                         Hearts Reward
+                       </label>
+                       <input
+                         type="number"
+                         value={content.gameCustomization?.heartShooterGame?.heartsReward || 20}
+                         onChange={(e) => setContent({
+                           ...content,
+                           gameCustomization: {
+                             ...content.gameCustomization,
+                             heartShooterGame: {
+                               ...content.gameCustomization?.heartShooterGame,
+                               heartsReward: parseInt(e.target.value) || 20
+                             }
+                           }
+                         })}
+                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                         placeholder="Hearts reward..."
+                         min="1"
+                         max="100"
+                       />
+                     </div>
+                   </div>
+                   <div className="grid grid-cols-3 gap-3">
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-1">
+                         Bullet Speed
+                       </label>
+                       <input
+                         type="number"
+                         value={content.gameCustomization?.heartShooterGame?.bulletSpeed || 15}
+                         onChange={(e) => setContent({
+                           ...content,
+                           gameCustomization: {
+                             ...content.gameCustomization,
+                             heartShooterGame: {
+                               ...content.gameCustomization?.heartShooterGame,
+                               bulletSpeed: parseInt(e.target.value) || 15
+                             }
+                           }
+                         })}
+                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                         placeholder="Bullet speed..."
+                         min="5"
+                         max="30"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-1">
+                         Heart Spawn Rate (ms)
+                       </label>
+                       <input
+                         type="number"
+                         value={content.gameCustomization?.heartShooterGame?.heartSpawnRate || 3000}
+                         onChange={(e) => setContent({
+                           ...content,
+                           gameCustomization: {
+                             ...content.gameCustomization,
+                             heartShooterGame: {
+                               ...content.gameCustomization?.heartShooterGame,
+                               heartSpawnRate: parseInt(e.target.value) || 3000
+                             }
+                           }
+                         })}
+                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                         placeholder="Spawn rate..."
+                         min="1000"
+                         max="10000"
+                         step="500"
+                       />
+                     </div>
+                     <div>
+                       <label className="block text-sm font-medium text-gray-700 mb-1">
+                         Combo Multiplier
+                       </label>
+                       <input
+                         type="number"
+                         value={content.gameCustomization?.heartShooterGame?.comboMultiplier || 5}
+                         onChange={(e) => setContent({
+                           ...content,
+                           gameCustomization: {
+                             ...content.gameCustomization,
+                             heartShooterGame: {
+                               ...content.gameCustomization?.heartShooterGame,
+                               comboMultiplier: parseInt(e.target.value) || 5
+                             }
+                           }
+                         })}
+                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                         placeholder="Combo multiplier..."
+                         min="1"
+                         max="20"
+                       />
+                     </div>
+                   </div>
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                       Difficulty
+                     </label>
+                     <select
+                       value={content.gameCustomization?.heartShooterGame?.difficulty || 'medium'}
+                       onChange={(e) => setContent({
+                         ...content,
+                         gameCustomization: {
+                           ...content.gameCustomization,
+                           heartShooterGame: {
+                             ...content.gameCustomization?.heartShooterGame,
+                             difficulty: e.target.value as 'easy' | 'medium' | 'hard'
+                           }
+                         }
+                       })}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                     >
+                       <option value="easy">Easy</option>
+                       <option value="medium">Medium</option>
+                       <option value="hard">Hard</option>
+                     </select>
+                   </div>
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                       🎉 Celebration Message
+                     </label>
+                     <textarea
+                       value={content.gameCustomization?.heartShooterGame?.celebrationMessage || ""}
+                       onChange={(e) => setContent({
+                         ...content,
+                         gameCustomization: {
+                           ...content.gameCustomization,
+                           heartShooterGame: {
+                             ...content.gameCustomization?.heartShooterGame,
+                             celebrationMessage: e.target.value
+                           }
+                         }
+                       })}
+                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                       placeholder="Message shown when player completes the game..."
+                       rows={3}
+                     />
+                     <p className="text-xs text-gray-500 mt-1">
+                       This message will appear in a big heart when someone wins the game! 🏹
+                     </p>
+                   </div>
+                   
+                   {/* Game Reset Control */}
+                   <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                     <div className="flex items-center justify-between">
+                       <div>
+                         <h4 className="font-medium text-red-800 text-sm">🔄 Game Reset Control</h4>
+                         <p className="text-xs text-red-600 mt-1">
+                           Reset this game's completion status for all users
+                         </p>
+                       </div>
+                       <button
+                         onClick={() => {
+                           if (confirm('⚠️ Are you sure you want to reset the Heart Shooter Game for ALL users? This will clear their completion status and they will need to play again to earn hearts.')) {
+                             // Reset the game by updating localStorage and content
+                             const currentContent = JSON.parse(localStorage.getItem('websiteContent') || '{}');
+                             if (currentContent.gameStats) {
+                               currentContent.gameStats.heartShooterCompleted = false;
+                               localStorage.setItem('websiteContent', JSON.stringify(currentContent));
+                               
+                               // Also update the current content state to ensure it persists
+                               const updatedContent = { ...content };
+                               if (!updatedContent.gameStats) {
+                                 updatedContent.gameStats = {
+                                   memoryCardCompleted: false,
+                                   loveSongCompleted: false,
+                                   flowerGardenCompleted: false,
+                                   heartShooterCompleted: false,
+                                   quizCompleted: false,
+                                   gamesPlayed: 0,
+                                   daysActive: 0,
+                                   totalHearts: 0,
+                                 };
+                               }
+                               updatedContent.gameStats.heartShooterCompleted = false;
+                               setContent(updatedContent);
+                               
+                               // Save to Firebase if available
+                               if (isFirebaseAvailable()) {
+                                 saveContentWithCompression(updatedContent);
+                               }
+                               
+                               alert('✅ Heart Shooter Game has been reset for all users!');
+                             }
+                           }
+                         }}
+                         className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
+                       >
+                         Reset Game
+                       </button>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+
+               {/* Quiz Game */}
                <div className="bg-gray-50 p-4 rounded-lg">
                  <h3 className="text-lg font-semibold text-gray-800 mb-3">🧠 Quiz Game</h3>
                                    <div className="space-y-3">

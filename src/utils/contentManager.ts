@@ -129,6 +129,9 @@ export interface WebsiteContent {
       celebrationMessage: string;
       gameDuration: number;
       difficulty: 'easy' | 'medium' | 'hard';
+      bulletSpeed: number;
+      heartSpawnRate: number;
+      comboMultiplier: number;
     };
     
     // Quiz Game
@@ -251,11 +254,14 @@ export const defaultContent: WebsiteContent = {
     // Heart Shooter Game
     heartShooterGame: {
       title: "Heart Shooter!",
-      description: "Shoot arrows at floating hearts to earn points and hearts!",
+      description: "Shoot hearts with your love gun to earn points and hearts!",
       heartsReward: 20,
       celebrationMessage: "🎯 Amazing shooting! You've hit all the hearts! 💘",
       gameDuration: 90,
-      difficulty: 'medium'
+      difficulty: 'medium',
+      bulletSpeed: 15,
+      heartSpawnRate: 3000,
+      comboMultiplier: 5
     },
     
     // Quiz Game
