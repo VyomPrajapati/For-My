@@ -22,8 +22,8 @@ interface AchievementSystemProps {
   gameStats: {
     quizCompleted: boolean;
     memoryCardCompleted: boolean;
-    loveSongCompleted: boolean;
     flowerGardenCompleted: boolean;
+    heartShooterCompleted: boolean;
     totalHearts: number;
     gamesPlayed: number;
     daysActive: number;

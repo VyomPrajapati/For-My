@@ -83,9 +83,8 @@ export interface WebsiteContent {
   // Game Stats (for tracking completion and achievements)
   gameStats?: {
     memoryCardCompleted: boolean;
-    loveSongCompleted: boolean;
     flowerGardenCompleted: boolean;
-    catchTheKittyCompleted: boolean;
+    heartShooterCompleted: boolean;
     quizCompleted: boolean;
     gamesPlayed: number;
     daysActive: number;
@@ -104,19 +103,7 @@ export interface WebsiteContent {
       customImages: string[]; // Array of 6 custom images for 6 pairs
     };
     
-    // Love Song Puzzle Game
-    loveSongPuzzleGame: {
-      title: string;
-      description: string;
-      songs: Array<{
-        title: string;
-        artist: string;
-        notes: string[];
-        difficulty: 'easy' | 'medium' | 'hard';
-        heartsReward: number;
-      }>;
-      celebrationMessage: string;
-    };
+
     
     // Flower Garden Game
     flowerGardenGame: {
@@ -134,15 +121,14 @@ export interface WebsiteContent {
       celebrationMessage: string;
     };
     
-    // Catch the Kitty Game
-    catchTheKittyGame: {
+    // Heart Shooter Game
+    heartShooterGame: {
       title: string;
       description: string;
       heartsReward: number;
       celebrationMessage: string;
-      numberOfKitties: number;
-      fallSpeed: number;
-      customImages: string[];
+      gameDuration: number;
+      difficulty: 'easy' | 'medium' | 'hard';
     };
     
     // Quiz Game
@@ -224,7 +210,7 @@ export const defaultContent: WebsiteContent = {
     memoryCardCompleted: false,
     loveSongCompleted: false,
     flowerGardenCompleted: false,
-    catchTheKittyCompleted: false,
+    heartShooterCompleted: false,
     quizCompleted: false,
     gamesPlayed: 0,
     daysActive: 0,
@@ -243,49 +229,7 @@ export const defaultContent: WebsiteContent = {
       customImages: [], // Empty array for admin to add custom images
     },
     
-    // Love Song Puzzle Game
-    loveSongPuzzleGame: {
-      title: "Love Song Puzzle!",
-      description: "Arrange musical notes to complete love songs",
-      songs: [
-        {
-          title: "Can't Help Falling in Love",
-          artist: "Elvis Presley",
-          notes: ["Do", "Mi", "Sol", "Do", "Mi", "Sol", "Do"],
-          difficulty: "easy",
-          heartsReward: 3,
-        },
-        {
-          title: "Perfect",
-          artist: "Ed Sheeran",
-          notes: ["Do", "Re", "Mi", "Fa", "Sol", "La", "Ti", "Do"],
-          difficulty: "medium",
-          heartsReward: 5,
-        },
-        {
-          title: "All of Me",
-          artist: "John Legend",
-          notes: ["Do", "Mi", "Sol", "Ti", "Do", "Mi", "Sol", "Ti"],
-          difficulty: "medium",
-          heartsReward: 5,
-        },
-        {
-          title: "Just the Way You Are",
-          artist: "Bruno Mars",
-          notes: ["Do", "Re", "Mi", "Fa", "Sol", "Fa", "Mi", "Re"],
-          difficulty: "easy",
-          heartsReward: 3,
-        },
-        {
-          title: "A Thousand Years",
-          artist: "Christina Perri",
-          notes: ["Do", "Mi", "Sol", "Do", "Mi", "Sol", "La", "Sol"],
-          difficulty: "hard",
-          heartsReward: 8,
-        }
-      ],
-      celebrationMessage: "🎵 Beautiful! You've completed the Love Song Puzzle! Your musical heart is in perfect harmony! 💖",
-    },
+
     
     // Flower Garden Game
     flowerGardenGame: {
@@ -304,15 +248,14 @@ export const defaultContent: WebsiteContent = {
       celebrationMessage: "🌺 Wonderful! You've completed the Flower Garden! Your love has bloomed beautifully! 🌸",
     },
     
-    // Catch the Kitty Game
-    catchTheKittyGame: {
-      title: "Catch the Kitty!",
-      description: "Catch falling kitties in your basket to earn hearts",
-      heartsReward: 15,
-      celebrationMessage: "🐱 Amazing! You've caught all the kitties! Your love reflexes are purr-fect! 💕",
-      numberOfKitties: 10,
-      fallSpeed: 2,
-      customImages: [],
+    // Heart Shooter Game
+    heartShooterGame: {
+      title: "Heart Shooter!",
+      description: "Shoot arrows at floating hearts to earn points and hearts!",
+      heartsReward: 20,
+      celebrationMessage: "🎯 Amazing shooting! You've hit all the hearts! 💘",
+      gameDuration: 90,
+      difficulty: 'medium'
     },
     
     // Quiz Game
@@ -706,7 +649,7 @@ export const compressImage = (imageData: string, maxSize: number = 200000): Prom
             }
           }, 'image/webp', 0.8);
         } else {
-          resolve(compressed);
+        resolve(compressed);
         }
       };
       
@@ -841,14 +784,14 @@ export const syncContentFromFirebase = async (): Promise<WebsiteContent | null> 
     if (!isFirebaseAvailable()) {
       return null;
     }
-
+    
     const docRef = doc(db, 'websiteContent', 'main');
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
       return docSnap.data() as WebsiteContent;
     } else {
-      return null;
+    return null;
     }
   } catch (error) {
     console.error('Error syncing content from Firebase:', error);

@@ -8,7 +8,7 @@ interface CustomizationPanelProps {
   onClose: () => void;
   onContentUpdate: (content: WebsiteContent) => void;
   currentContent: WebsiteContent;
-  onGameReset?: (gameType: 'memoryCard' | 'loveSong' | 'flowerGarden' | 'catchTheKitty' | 'quiz') => void;
+  onGameReset?: (gameType: 'memoryCard' | 'loveSong' | 'flowerGarden' | 'quiz') => void;
 }
 
 const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
@@ -62,7 +62,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
             gameMessage: parsed.gameMessage || currentContent.gameMessage
           };
           
-          setContent(mergedContent);
+      setContent(mergedContent);
         } catch (error) {
           console.error('Error parsing saved content:', error);
           setContent(currentContent);
@@ -181,113 +181,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     }
   };
 
-  // Function to handle multiple image uploads for Catch the Kitty Game
-  const handleMultipleKittyImageUpload = async (files: File[]) => {
-    try {
-      console.log('handleMultipleKittyImageUpload called with files:', files);
-      
-      if (!files || !Array.isArray(files) || files.length === 0) {
-        alert('❌ No valid files provided for upload');
-        return;
-      }
-      
-      const currentImages = content.gameCustomization?.catchTheKittyGame?.customImages || [];
-      const remainingSlots = 10 - currentImages.length;
-      const filesToProcess = files.slice(0, remainingSlots);
-      
-      if (filesToProcess.length === 0) {
-        alert('❌ No more image slots available!');
-        return;
-      }
-      
-      // Show processing message for large files
-      const largeFiles = filesToProcess.filter(file => file.size > 5 * 1024 * 1024); // 5MB+
-      if (largeFiles.length > 0) {
-        alert(`🔄 Processing ${largeFiles.length} large kitty image(s)... This may take a moment as we optimize them for the best quality!`);
-      }
-      
-      // Process multiple images
-      const newImages: string[] = [...currentImages];
-      let successCount = 0;
-      let errorCount = 0;
-      
-      for (let i = 0; i < filesToProcess.length; i++) {
-        const file = filesToProcess[i];
-        try {
-          console.log(`Processing kitty file ${i + 1}:`, file.name, file.type, file.size);
-          
-          // Show progress for multiple files
-          if (filesToProcess.length > 1) {
-            const progress = Math.round(((i + 1) / filesToProcess.length) * 100);
-            console.log(`Processing kitty image ${i + 1}/${filesToProcess.length} (${progress}%)`);
-          }
-          
-          // Use the new image handling function with automatic compression
-          const compressedImage = await handleImageUpload(file, 0.2); // Target 200KB
-          newImages.push(compressedImage);
-          successCount++;
-          
-          console.log(`Successfully processed kitty ${file.name}`);
-          
-          // Show individual success for large files
-          if (file.size > 5 * 1024 * 1024) {
-            const originalSize = (file.size / (1024 * 1024)).toFixed(1);
-            const compressedSize = (compressedImage.length / (1024 * 1024)).toFixed(2);
-            alert(`✅ ${file.name} compressed from ${originalSize}MB to ${compressedSize}MB!`);
-          }
-        } catch (error) {
-          errorCount++;
-          console.error(`Error processing kitty file ${file.name}:`, error);
-          if (error instanceof Error) {
-            alert(`❌ Error processing ${file.name}: ${error.message}`);
-          } else {
-            alert(`❌ Error processing ${file.name}. Please try again.`);
-          }
-        }
-      }
-      
-      // Update content with new images
-      setContent({
-        ...content,
-        gameCustomization: {
-          ...content.gameCustomization,
-          catchTheKittyGame: {
-            ...content.gameCustomization?.catchTheKittyGame,
-            customImages: newImages
-          }
-        }
-      });
-      
-      // Show comprehensive success message
-      if (successCount > 0) {
-        let message = '';
-        if (successCount === 1) {
-          message = `✅ Successfully added 1 kitty image!`;
-        } else {
-          message = `✅ Successfully added ${successCount} kitty images!`;
-        }
-        
-        // Add compression info
-        if (largeFiles.length > 0) {
-          message += `\n\n🔄 Large images were automatically compressed to ~200KB for optimal performance while maintaining good quality.`;
-        }
-        
-        alert(message);
-      }
-      
-      if (errorCount > 0) {
-        alert(`⚠️ ${errorCount} kitty image(s) failed to upload. Please check the file format.`);
-      }
-      
-    } catch (error) {
-      console.error('Error in handleMultipleKittyImageUpload:', error);
-      if (error instanceof Error) {
-        alert(`❌ ${error.message}`);
-      } else {
-        alert('❌ Error processing kitty images. Please try again.');
-      }
-    }
-  };
+
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -297,16 +191,16 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
       
       // Save text content and wait for it to complete
       await saveContentWithCompression(contentToSave);
-      
-      // Save custom images
+    
+    // Save custom images
       if (contentToSave.customImages.panel3) {
         await saveCustomImage('panel3', contentToSave.customImages.panel3);
-      }
+    }
       if (contentToSave.customImages.envelope) {
         await saveCustomImage('envelope', contentToSave.customImages.envelope);
-      }
-      
-      // Save custom music
+    }
+    
+    // Save custom music
       if (contentToSave.customMusic) {
         saveCustomMusic(contentToSave.customMusic);
       }
@@ -319,15 +213,15 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
       
       // IMPORTANT: Update parent component AFTER content is saved
       onContentUpdate(contentToSave);
-      
-      // Show success message
-      setShowSuccessMessage(true);
-      setTimeout(() => setShowSuccessMessage(false), 3000);
+    
+    // Show success message
+    setShowSuccessMessage(true);
+    setTimeout(() => setShowSuccessMessage(false), 3000);
     } catch (error) {
       console.error('Error saving content:', error);
       alert('❌ Error saving content. Please try again.');
     } finally {
-      setIsSaving(false);
+    setIsSaving(false);
     }
   };
 
@@ -350,20 +244,20 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
       try {
         // Save image to content system and wait for it to complete
         await saveCustomImage(selectedImageKey, selectedImage);
-        
-        // Update local content state
-        const updatedContent = { ...content };
-        updatedContent.customImages = updatedContent.customImages || {};
-        updatedContent.customImages[selectedImageKey as keyof typeof updatedContent.customImages] = selectedImage;
-        setContent(updatedContent);
-        
+      
+      // Update local content state
+      const updatedContent = { ...content };
+      updatedContent.customImages = updatedContent.customImages || {};
+      updatedContent.customImages[selectedImageKey as keyof typeof updatedContent.customImages] = selectedImage;
+      setContent(updatedContent);
+      
         // IMPORTANT: Update parent component AFTER image is saved
-        onContentUpdate(updatedContent);
-        
-        alert(`Image saved for ${selectedImageKey}! It will now appear on your website.`);
-        setSelectedImage(null);
-        setSelectedImageKey('');
-        setImageFile(null);
+      onContentUpdate(updatedContent);
+      
+      alert(`Image saved for ${selectedImageKey}! It will now appear on your website.`);
+      setSelectedImage(null);
+      setSelectedImageKey('');
+      setImageFile(null);
       } catch (error) {
         console.error('Error saving image:', error);
         alert('❌ Error saving image. Please try again.');
@@ -373,23 +267,23 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
 
   const handleImageRemove = async (imageKey: string) => {
     try {
-      const updatedContent = { ...content };
-      if (updatedContent.customImages) {
-        delete updatedContent.customImages[imageKey as keyof typeof updatedContent.customImages];
-        setContent(updatedContent);
-        
+    const updatedContent = { ...content };
+    if (updatedContent.customImages) {
+      delete updatedContent.customImages[imageKey as keyof typeof updatedContent.customImages];
+      setContent(updatedContent);
+      
         // Save the updated content to ensure it persists
         await saveContentWithCompression(updatedContent);
         
         // IMPORTANT: Update parent component AFTER content is saved
-        onContentUpdate(updatedContent);
-        
-        // Also remove from localStorage
-        const currentContent = JSON.parse(localStorage.getItem('websiteContent') || '{}');
-        if (currentContent.customImages) {
-          delete currentContent.customImages[imageKey];
-          localStorage.setItem('websiteContent', JSON.stringify(currentContent));
-        }
+      onContentUpdate(updatedContent);
+      
+      // Also remove from localStorage
+      const currentContent = JSON.parse(localStorage.getItem('websiteContent') || '{}');
+      if (currentContent.customImages) {
+        delete currentContent.customImages[imageKey];
+        localStorage.setItem('websiteContent', JSON.stringify(currentContent));
+      }
       }
     } catch (error) {
       console.error('Error removing image:', error);
@@ -1192,7 +1086,6 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                                  memoryCardCompleted: false,
                                  loveSongCompleted: false,
                                  flowerGardenCompleted: false,
-                                 catchTheKittyCompleted: false,
                                  quizCompleted: false,
                                  gamesPlayed: 0,
                                  daysActive: 0,
@@ -1202,7 +1095,6 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                                updatedContent.gameStats.memoryCardCompleted = false;
                                updatedContent.gameStats.loveSongCompleted = false;
                                updatedContent.gameStats.flowerGardenCompleted = false;
-                               updatedContent.gameStats.catchTheKittyCompleted = false;
                                updatedContent.gameStats.quizCompleted = false;
                              }
                              setContent(updatedContent);
@@ -1629,10 +1521,11 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                              />
                              <input
                                type="text"
-                               value={song.artist}
+                               value={song.words?.join(', ') || ''}
                                onChange={(e) => {
                                  const newSongs = [...(content.gameCustomization?.loveSongPuzzleGame?.songs || [])];
-                                 newSongs[index] = { ...newSongs[index], artist: e.target.value };
+                                 const words = e.target.value.split(',').map(word => word.trim()).filter(word => word.length > 0);
+                                 newSongs[index] = { ...newSongs[index], words: words };
                                  setContent({
                                    ...content,
                                    gameCustomization: {
@@ -1644,8 +1537,17 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                                    }
                                  });
                                }}
+                               onKeyDown={(e) => {
+                                 if (e.key === ',') {
+                                   e.preventDefault();
+                                   const currentValue = e.currentTarget.value;
+                                   const newValue = currentValue + ', ';
+                                   e.currentTarget.value = newValue;
+                                   e.currentTarget.dispatchEvent(new Event('input', { bubbles: true }));
+                                 }
+                               }}
                                className="px-2 py-1 border border-gray-300 rounded text-sm"
-                               placeholder="Artist"
+                               placeholder="Words (comma separated)"
                              />
                            </div>
                            <div className="grid grid-cols-3 gap-2 mb-2">
@@ -1717,8 +1619,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                        onClick={() => {
                          const newSong = {
                            title: "New Song",
-                           artist: "Artist",
-                           notes: ["Do", "Re", "Mi"],
+                           words: ["Word1", "Word2", "Word3"],
                            difficulty: "easy" as const,
                            heartsReward: 1
                          };
@@ -2071,313 +1972,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                   </div>
                </div>
 
-               {/* Catch the Kitty Game */}
-               <div className="bg-gray-50 p-4 rounded-lg">
-                 <h3 className="text-lg font-semibold text-gray-800 mb-3">🐱 Catch the Kitty Game</h3>
-                 <div className="space-y-3">
-                   <div>
-                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                       Game Title
-                     </label>
-                     <input
-                       type="text"
-                       value={content.gameCustomization?.catchTheKittyGame?.title || ""}
-                       onChange={(e) => setContent({
-                         ...content,
-                         gameCustomization: {
-                           ...content.gameCustomization,
-                           catchTheKittyGame: {
-                             ...content.gameCustomization?.catchTheKittyGame,
-                             title: e.target.value
-                           }
-                         }
-                       })}
-                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                       placeholder="Enter game title..."
-                     />
-                   </div>
-                   <div>
-                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                       Game Description
-                     </label>
-                     <input
-                       type="text"
-                       value={content.gameCustomization?.catchTheKittyGame?.description || ""}
-                       onChange={(e) => setContent({
-                         ...content,
-                         gameCustomization: {
-                           ...content.gameCustomization,
-                           catchTheKittyGame: {
-                             ...content.gameCustomization?.catchTheKittyGame,
-                             description: e.target.value
-                           }
-                         }
-                       })}
-                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                       placeholder="Enter game description..."
-                     />
-                   </div>
-                   <div className="grid grid-cols-2 gap-3">
-                     <div>
-                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                         Number of Kitties
-                       </label>
-                       <input
-                         type="number"
-                         value={content.gameCustomization?.catchTheKittyGame?.numberOfKitties || 10}
-                         onChange={(e) => setContent({
-                           ...content,
-                           gameCustomization: {
-                             ...content.gameCustomization,
-                             catchTheKittyGame: {
-                               ...content.gameCustomization?.catchTheKittyGame,
-                               numberOfKitties: parseInt(e.target.value) || 10
-                             }
-                           }
-                         })}
-                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                         placeholder="Number of kitties..."
-                         min="1"
-                         max="20"
-                       />
-                     </div>
-                     <div>
-                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                         Fall Speed
-                       </label>
-                       <input
-                         type="number"
-                         value={content.gameCustomization?.catchTheKittyGame?.fallSpeed || 2}
-                         onChange={(e) => setContent({
-                           ...content,
-                           gameCustomization: {
-                             ...content.gameCustomization,
-                             catchTheKittyGame: {
-                               ...content.gameCustomization?.catchTheKittyGame,
-                               fallSpeed: parseFloat(e.target.value) || 2
-                             }
-                           }
-                         })}
-                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                         placeholder="Fall speed..."
-                         min="0.5"
-                         max="5"
-                         step="0.1"
-                       />
-                     </div>
-                   </div>
-                   <div>
-                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                       Hearts Reward
-                     </label>
-                     <input
-                       type="number"
-                       value={content.gameCustomization?.catchTheKittyGame?.heartsReward || 15}
-                       onChange={(e) => setContent({
-                         ...content,
-                         gameCustomization: {
-                           ...content.gameCustomization,
-                           catchTheKittyGame: {
-                             ...content.gameCustomization?.catchTheKittyGame,
-                             heartsReward: parseInt(e.target.value) || 15
-                           }
-                         }
-                       })}
-                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                       placeholder="Hearts reward..."
-                       min="1"
-                       max="50"
-                     />
-                   </div>
-                   
-                   {/* Custom Kitty Images */}
-                   <div>
-                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                       🐱 Custom Kitty Images (Optional)
-                     </label>
-                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-purple-400 transition-colors">
-                       <div className="space-y-2">
-                         <p className="text-sm text-gray-600">
-                           Upload custom kitty images to make the game more personal! 🎨
-                         </p>
-                         <p className="text-xs text-gray-500">
-                           Any image size accepted! Automatically compressed to ~200KB for optimal performance.
-                         </p>
-                         <p className="text-xs text-gray-500">
-                           Current images: {content.gameCustomization?.catchTheKittyGame?.customImages?.length || 0}/10
-                         </p>
-                         
-                         {/* Image Preview Grid */}
-                         {content.gameCustomization?.catchTheKittyGame?.customImages && 
-                          content.gameCustomization.catchTheKittyGame.customImages.length > 0 && (
-                           <div className="grid grid-cols-3 gap-2 mt-3">
-                             {content.gameCustomization.catchTheKittyGame.customImages.map((image, index) => (
-                               <div key={index} className="relative group">
-                                 <img
-                                   src={image}
-                                   alt={`Kitty ${index + 1}`}
-                                   className="w-full h-16 object-cover rounded border border-gray-200"
-                                 />
-                                 <button
-                                   onClick={() => {
-                                     const updatedImages = content.gameCustomization?.catchTheKittyGame?.customImages?.filter((_, i) => i !== index) || [];
-                                     setContent({
-                                       ...content,
-                                       gameCustomization: {
-                                         ...content.gameCustomization,
-                                         catchTheKittyGame: {
-                                           ...content.gameCustomization?.catchTheKittyGame,
-                                           customImages: updatedImages
-                                         }
-                                       }
-                                     });
-                                   }}
-                                   className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                                 >
-                                   ×
-                                 </button>
-                               </div>
-                             ))}
-                           </div>
-                         )}
-                         
-                         <div className="flex flex-col sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-2">
-                           <input
-                             type="file"
-                             accept="image/*"
-                             multiple
-                             onChange={(e) => {
-                               try {
-                                 const files = e.target?.files;
-                                 if (files && files.length > 0) {
-                                   const fileArray = Array.from(files);
-                                   handleMultipleKittyImageUpload(fileArray);
-                                 }
-                               } catch (error) {
-                                 console.error('Error handling kitty image upload:', error);
-                                 alert('❌ Error uploading kitty images. Please try again.');
-                               }
-                             }}
-                             className="hidden"
-                             id="kitty-image-upload"
-                           />
-                           <label
-                             htmlFor="kitty-image-upload"
-                             className="cursor-pointer bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
-                           >
-                             <span>📁 Choose Images</span>
-                           </label>
-                           <span className="text-sm text-gray-500">or drag & drop here</span>
-                         </div>
-                         
-                         <div
-                           className="mt-2 p-2 bg-purple-50 border border-purple-200 rounded text-xs text-purple-700"
-                           onDragOver={(e) => {
-                             e.preventDefault();
-                             e.currentTarget.classList.add('border-purple-400', 'bg-purple-100');
-                           }}
-                           onDragLeave={(e) => {
-                             e.currentTarget.classList.remove('border-purple-400', 'bg-purple-100');
-                           }}
-                           onDrop={(e) => {
-                             try {
-                               e.preventDefault();
-                               e.currentTarget.classList.remove('border-purple-400', 'bg-purple-100');
-                               const files = e.dataTransfer?.files;
-                               if (files && files.length > 0) {
-                                 const fileArray = Array.from(files);
-                                 handleMultipleKittyImageUpload(fileArray);
-                               }
-                             } catch (error) {
-                               console.error('Error handling kitty image drop:', error);
-                               alert('❌ Error uploading kitty images. Please try again.');
-                             }
-                           }}
-                         >
-                           🐱 Drop kitty images here to upload them instantly!
-                         </div>
-                       </div>
-                     </div>
-                   </div>
-                   
-                   {/* Celebration Message */}
-                   <div>
-                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                       🎉 Celebration Message
-                     </label>
-                     <textarea
-                       value={content.gameCustomization?.catchTheKittyGame?.celebrationMessage || ""}
-                       onChange={(e) => setContent({
-                         ...content,
-                         gameCustomization: {
-                           ...content.gameCustomization,
-                           catchTheKittyGame: {
-                             ...content.gameCustomization?.catchTheKittyGame,
-                             celebrationMessage: e.target.value
-                           }
-                         }
-                       })}
-                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                       placeholder="Message shown when player completes the game..."
-                       rows={3}
-                     />
-                     <p className="text-xs text-gray-500 mt-1">
-                       This message will appear in a big heart when someone wins the game! 🐱
-                     </p>
-                   </div>
-                   
-                   {/* Game Reset Control */}
-                   <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                     <div className="flex items-center justify-between">
-                       <div>
-                         <h4 className="font-medium text-red-800 text-sm">🔄 Game Reset Control</h4>
-                         <p className="text-xs text-red-600 mt-1">
-                           Reset this game's completion status for all users
-                         </p>
-                       </div>
-                       <button
-                         onClick={() => {
-                           if (confirm('⚠️ Are you sure you want to reset the Catch the Kitty Game for ALL users? This will clear their completion status and they will need to play again to earn hearts.')) {
-                             // Reset the game by updating localStorage and content
-                             const currentContent = JSON.parse(localStorage.getItem('websiteContent') || '{}');
-                             if (currentContent.gameStats) {
-                               currentContent.gameStats.catchTheKittyCompleted = false;
-                               localStorage.setItem('websiteContent', JSON.stringify(currentContent));
-                               
-                               // Also update the current content state to ensure it persists
-                               const updatedContent = { ...content };
-                               if (!updatedContent.gameStats) {
-                                 updatedContent.gameStats = {
-                                   memoryCardCompleted: false,
-                                   loveSongCompleted: false,
-                                   flowerGardenCompleted: false,
-                                   catchTheKittyCompleted: false,
-                                   quizCompleted: false,
-                                   gamesPlayed: 0,
-                                   daysActive: 0,
-                                   totalHearts: 0,
-                                 };
-                               }
-                               updatedContent.gameStats.catchTheKittyCompleted = false;
-                               setContent(updatedContent);
-                               
-                               // Save to Firebase if available
-                               if (isFirebaseAvailable()) {
-                                 saveContentWithCompression(updatedContent);
-                               }
-                               
-                               alert('✅ Catch the Kitty Game has been reset for all users!');
-                             }
-                           }
-                         }}
-                         className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
-                       >
-                         Reset Game
-                       </button>
-                     </div>
-                   </div>
-                 </div>
-               </div>
+
 
                {/* Achievement System */}
                <div className="bg-gray-50 p-4 rounded-lg">

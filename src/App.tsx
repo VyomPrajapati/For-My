@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Play, Pause, Volume2, VolumeX, Settings } from 'lucide-react';
 import QuizGame from './components/QuizGame';
 import MemoryCardGame from './components/MemoryCardGame';
-import LoveSongPuzzle from './components/LoveSongPuzzle';
+
 import FlowerGarden from './components/FlowerGarden';
-import CatchTheKitty from './components/CatchTheKitty';
+import HeartShooter from './components/HeartShooter';
 import AchievementSystem from './components/AchievementSystem';
 import GameCelebration from './components/GameCelebration';
 import ScrollReveal from './components/ScrollReveal';
@@ -28,7 +28,6 @@ import Img1 from './images/pic1.gif';
 import Img2 from './images/pic2.gif';
 import Img3 from './images/pic3.jpg';
 import EnvelopeGif from './images/intro.gif';
-import HelloKitty from './images/hellokitty.gif';
 
 // Import music
 import musicFile from './music.mp3';
@@ -200,12 +199,11 @@ function App() {
   const [hearts, setHearts] = useState<Heart[]>([]);
   const [showMemoryCardGame, setShowMemoryCardGame] = useState<boolean>(false);
   const [memoryCardCompleted, setMemoryCardCompleted] = useState<boolean>(false);
-  const [showLoveSongGame, setShowLoveSongGame] = useState<boolean>(false);
-  const [loveSongCompleted, setLoveSongCompleted] = useState<boolean>(false);
+
   const [showFlowerGarden, setShowFlowerGarden] = useState<boolean>(false);
   const [flowerGardenCompleted, setFlowerGardenCompleted] = useState<boolean>(false);
-  const [showCatchTheKitty, setShowCatchTheKitty] = useState<boolean>(false);
-  const [catchTheKittyCompleted, setCatchTheKittyCompleted] = useState<boolean>(false);
+  const [showHeartShooter, setShowHeartShooter] = useState<boolean>(false);
+  const [heartShooterCompleted, setHeartShooterCompleted] = useState<boolean>(false);
   const [showAchievementSystem, setShowAchievementSystem] = useState<boolean>(false);
   
   // Celebration states
@@ -244,7 +242,7 @@ function App() {
   };
 
   // Function to show celebration with customizable message
-  const showGameCelebration = (gameType: 'memoryCard' | 'loveSong' | 'flowerGarden' | 'catchTheKitty' | 'quiz') => {
+  const showGameCelebration = (gameType: 'memoryCard' | 'flowerGarden' | 'heartShooter' | 'quiz') => {
     const message = websiteContent.gameCustomization?.[`${gameType}Game` as keyof typeof websiteContent.gameCustomization]?.celebrationMessage || 
       `🎉 Congratulations! You've completed the ${gameType} game! 💕`;
     
@@ -253,16 +251,15 @@ function App() {
   };
 
   // Function to update game stats and save to content
-  const updateGameStats = useCallback((gameType: 'memoryCard' | 'loveSong' | 'flowerGarden' | 'catchTheKitty' | 'quiz', completed: boolean) => {
+  const updateGameStats = useCallback((gameType: 'memoryCard' | 'flowerGarden' | 'heartShooter' | 'quiz', completed: boolean) => {
     const updatedContent = { ...websiteContent };
     
     // Initialize gameStats if it doesn't exist
     if (!updatedContent.gameStats) {
       updatedContent.gameStats = {
         memoryCardCompleted: false,
-        loveSongCompleted: false,
         flowerGardenCompleted: false,
-        catchTheKittyCompleted: false,
+        heartShooterCompleted: false,
         quizCompleted: false,
         gamesPlayed: 0,
         daysActive: 1,
@@ -275,14 +272,11 @@ function App() {
       case 'memoryCard':
         updatedContent.gameStats.memoryCardCompleted = completed;
         break;
-      case 'loveSong':
-        updatedContent.gameStats.loveSongCompleted = completed;
-        break;
       case 'flowerGarden':
         updatedContent.gameStats.flowerGardenCompleted = completed;
         break;
-      case 'catchTheKitty':
-        updatedContent.gameStats.catchTheKittyCompleted = completed;
+      case 'heartShooter':
+        updatedContent.gameStats.heartShooterCompleted = completed;
         break;
       case 'quiz':
         updatedContent.gameStats.quizCompleted = completed;
@@ -292,8 +286,8 @@ function App() {
     // Update gamesPlayed count
     updatedContent.gameStats.gamesPlayed = [
       updatedContent.gameStats.memoryCardCompleted,
-      updatedContent.gameStats.loveSongCompleted,
       updatedContent.gameStats.flowerGardenCompleted,
+      updatedContent.gameStats.heartShooterCompleted,
       updatedContent.gameStats.quizCompleted
     ].filter(Boolean).length;
     
@@ -383,7 +377,7 @@ function App() {
   useEffect(() => {
     if (websiteContent.gameStats) {
       setMemoryCardCompleted(websiteContent.gameStats.memoryCardCompleted || false);
-      setLoveSongCompleted(websiteContent.gameStats.loveSongCompleted || false);
+
       setFlowerGardenCompleted(websiteContent.gameStats.flowerGardenCompleted || false);
       setQuizCompleted(websiteContent.gameStats.quizCompleted || false);
     }
@@ -698,7 +692,7 @@ function App() {
             <div className="bg-pink-100 w-12 h-12 md:w-16 md:h-16 mx-auto rounded-full flex items-center justify-center mb-3">
               <div className="w-6 h-6 md:w-8 md:h-8 text-pink-600 flex items-center justify-center">
                 🃏
-              </div>
+            </div>
             </div>
             <h2 className="text-lg md:text-xl font-bold text-pink-600 font-comic">Memory Card Game!</h2>
             <p className="text-sm md:text-base text-gray-600 font-comic mt-2">
@@ -714,31 +708,7 @@ function App() {
           </motion.div>
         </ScrollReveal>
 
-        {/* Love Song Puzzle Game */}
-        <ScrollReveal animation="slide" duration={0.7} delay={0.35}>
-          <motion.div
-            className="comic-panel bg-white p-4 md:p-6 text-center rounded-lg shadow-lg hover:scale-105 transition-transform cursor-pointer"
-            whileHover={{ rotate: [-1, 1, -1, 0] }}
-            onClick={(e: React.MouseEvent) => { e.stopPropagation(); setShowLoveSongGame(true); }}
-          >
-            <div className="bg-purple-100 w-12 h-12 md:w-16 md:h-16 mx-auto rounded-full flex items-center justify-center mb-3">
-              <div className="w-6 h-6 md:w-8 md:h-8 text-purple-600 flex items-center justify-center">
-                🎵
-              </div>
-            </div>
-            <h2 className="text-lg md:text-xl font-bold text-purple-600 font-comic">Love Song Puzzle!</h2>
-            <p className="text-sm md:text-base text-gray-600 font-comic mt-2">
-              Arrange musical notes to complete love songs
-            </p>
-            {loveSongCompleted && (
-              <div className="mt-3 bg-purple-50 p-2 rounded-lg border border-purple-200">
-                <p className="text-purple-600 font-comic text-xs md:text-sm">
-                  Song puzzle completed! 🎉 Try again to improve your score!
-                </p>
-              </div>
-            )}
-          </motion.div>
-        </ScrollReveal>
+
 
         {/* Flower Garden Game */}
         <ScrollReveal animation="slide" duration={0.7} delay={0.4}>
@@ -766,33 +736,7 @@ function App() {
           </motion.div>
         </ScrollReveal>
 
-        {/* Catch the Kitty Game */}
-        <ScrollReveal animation="slide" duration={0.7} delay={0.42}>
-          <motion.div
-            className="comic-panel bg-white p-4 md:p-6 text-center rounded-lg shadow-lg hover:scale-105 transition-transform cursor-pointer"
-            whileHover={{ rotate: [-1, 1, -1, 0] }}
-            onClick={(e: React.MouseEvent) => { e.stopPropagation(); setShowCatchTheKitty(true); }}
-          >
-            <div className="bg-orange-100 w-12 h-12 md:w-16 md:h-16 mx-auto rounded-full flex items-center justify-center mb-3">
-              <div className="w-6 h-6 md:w-8 md:h-8 text-orange-600 flex items-center justify-center">
-                🐱
-              </div>
-            </div>
-            <h2 className="text-lg md:text-xl font-bold text-orange-600 font-comic">
-              {safeWebsiteContent.gameCustomization?.catchTheKittyGame?.title || "Catch the Kitty!"}
-            </h2>
-            <p className="text-sm md:text-base text-gray-600 font-comic mt-2">
-              {safeWebsiteContent.gameCustomization?.catchTheKittyGame?.description || "Catch falling kitties in your basket to earn hearts"}
-            </p>
-            {catchTheKittyCompleted && (
-              <div className="mt-3 bg-orange-50 p-2 rounded-lg border border-orange-200">
-                <p className="text-orange-600 font-comic text-xs md:text-sm">
-                  All kitties caught! 🎉 Play again to improve your score!
-                </p>
-              </div>
-            )}
-          </motion.div>
-        </ScrollReveal>
+
 
         {/* Achievement System */}
         <ScrollReveal animation="slide" duration={0.7} delay={0.45}>
@@ -810,6 +754,34 @@ function App() {
             <p className="text-sm md:text-base text-gray-600 font-comic mt-2">
               Complete challenges and unlock rewards
             </p>
+          </motion.div>
+        </ScrollReveal>
+
+        {/* Heart Shooter Game */}
+        <ScrollReveal animation="slide" duration={0.7} delay={0.48}>
+          <motion.div
+            className="comic-panel bg-white p-4 md:p-6 text-center rounded-lg shadow-lg hover:scale-105 transition-transform cursor-pointer"
+            whileHover={{ rotate: [-1, 1, -1, 0] }}
+            onClick={(e: React.MouseEvent) => { e.stopPropagation(); setShowHeartShooter(true); }}
+          >
+            <div className="bg-red-100 w-12 h-12 md:w-16 md:h-16 mx-auto rounded-full flex items-center justify-center mb-3">
+              <div className="w-6 h-6 md:w-8 md:h-8 text-red-600 flex items-center justify-center">
+                🏹
+              </div>
+            </div>
+            <h2 className="text-lg md:text-xl font-bold text-red-600 font-comic">
+              {safeWebsiteContent.gameCustomization?.heartShooterGame?.title || "Heart Shooter!"}
+            </h2>
+            <p className="text-sm md:text-base text-gray-600 font-comic mt-2">
+              {safeWebsiteContent.gameCustomization?.heartShooterGame?.description || "Shoot arrows at floating hearts to earn points and hearts!"}
+            </p>
+            {heartShooterCompleted && (
+              <div className="mt-3 bg-red-50 p-2 rounded-lg border border-red-200">
+                <p className="text-red-600 font-comic text-xs md:text-sm">
+                  Amazing shooting! 🎯 Play again to improve your score!
+                </p>
+              </div>
+            )}
           </motion.div>
         </ScrollReveal>
 
@@ -979,32 +951,7 @@ function App() {
         />
       )}
 
-      {/* Love Song Puzzle Game Modal */}
-      {showLoveSongGame && (
-        <LoveSongPuzzle 
-          onComplete={(hearts) => {
-            setLoveSongCompleted(true);
-            updateGameStats('loveSong', true);
-            // Add floating hearts
-            for (let i = 0; i < Math.min(hearts, 10); i++) {
-              setTimeout(() => {
-                const randomX = Math.random() * window.innerWidth;
-                const randomY = Math.random() * window.innerHeight;
-                const newHeart: Heart = { 
-                  id: Date.now() + i, 
-                  x: randomX, 
-                  y: randomY 
-                };
-                setHearts(prev => [...prev, newHeart]);
-                setTimeout(() => setHearts((hs) => hs.filter((h) => h.id !== newHeart.id)), 2000);
-              }, i * 200);
-            }
-            // Show celebration
-            showGameCelebration('loveSong');
-          }} 
-          onClose={() => setShowLoveSongGame(false)} 
-        />
-      )}
+
 
       {/* Flower Garden Game Modal */}
       {showFlowerGarden && (
@@ -1032,12 +979,12 @@ function App() {
         />
       )}
 
-      {/* Catch the Kitty Game Modal */}
-      {showCatchTheKitty && (
-        <CatchTheKitty 
+      {/* Heart Shooter Game Modal */}
+      {showHeartShooter && (
+        <HeartShooter 
           onComplete={(hearts) => {
-            setCatchTheKittyCompleted(true);
-            updateGameStats('catchTheKitty', true);
+            setHeartShooterCompleted(true);
+            updateGameStats('heartShooter', true);
             // Add floating hearts
             for (let i = 0; i < Math.min(hearts, 10); i++) {
               setTimeout(() => {
@@ -1053,18 +1000,19 @@ function App() {
               }, i * 200);
             }
             // Show celebration
-            showGameCelebration('catchTheKitty');
+            showGameCelebration('heartShooter');
           }} 
-          onClose={() => setShowCatchTheKitty(false)} 
-          customImages={safeWebsiteContent.gameCustomization?.catchTheKittyGame?.customImages || []}
-          title={safeWebsiteContent.gameCustomization?.catchTheKittyGame?.title}
-          description={safeWebsiteContent.gameCustomization?.catchTheKittyGame?.description}
-          heartsReward={safeWebsiteContent.gameCustomization?.catchTheKittyGame?.heartsReward}
-          celebrationMessage={safeWebsiteContent.gameCustomization?.catchTheKittyGame?.celebrationMessage}
-          numberOfKitties={safeWebsiteContent.gameCustomization?.catchTheKittyGame?.numberOfKitties}
-          fallSpeed={safeWebsiteContent.gameCustomization?.catchTheKittyGame?.fallSpeed}
+          onClose={() => setShowHeartShooter(false)}
+          title={safeWebsiteContent.gameCustomization?.heartShooterGame?.title}
+          description={safeWebsiteContent.gameCustomization?.heartShooterGame?.description}
+          heartsReward={safeWebsiteContent.gameCustomization?.heartShooterGame?.heartsReward}
+          celebrationMessage={safeWebsiteContent.gameCustomization?.heartShooterGame?.celebrationMessage}
+          gameDuration={safeWebsiteContent.gameCustomization?.heartShooterGame?.gameDuration}
+          difficulty={safeWebsiteContent.gameCustomization?.heartShooterGame?.difficulty}
         />
       )}
+
+
 
       {/* Achievement System Modal */}
       {showAchievementSystem && (
@@ -1089,10 +1037,10 @@ function App() {
           gameStats={{
             quizCompleted,
             memoryCardCompleted,
-            loveSongCompleted,
             flowerGardenCompleted,
+            heartShooterCompleted,
             totalHearts: 0, // This will be calculated based on game completions
-            gamesPlayed: [quizCompleted, memoryCardCompleted, loveSongCompleted, flowerGardenCompleted].filter(Boolean).length,
+            gamesPlayed: [quizCompleted, memoryCardCompleted, flowerGardenCompleted, heartShooterCompleted].filter(Boolean).length,
             daysActive: 1 // This could be enhanced with localStorage tracking
           }}
         />
@@ -1144,9 +1092,7 @@ function App() {
               case 'memoryCard':
                 setMemoryCardCompleted(false);
                 break;
-              case 'loveSong':
-                setLoveSongCompleted(false);
-                break;
+
               case 'flowerGarden':
                 setFlowerGardenCompleted(false);
                 break;
