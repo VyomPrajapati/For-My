@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Settings, Save, Upload, X, Edit3, Image as ImageIcon, Download, Upload as UploadIcon, Trash2, Music, FileText, Heart } from 'lucide-react';
-import { WebsiteContent, saveContentWithCompression, saveCustomImage, saveCustomMusic, getStorageSizeMB, exportContent, importContent, isFirebaseAvailable, handleImageUpload, cleanupAndFixContent } from '../utils/contentManager';
+import { Settings, Save, Upload, X, Edit3, Image as ImageIcon, Download, Upload as UploadIcon, Trash2, Music, FileText, Heart, Video } from 'lucide-react';
+import { WebsiteContent, saveContentWithCompression, saveCustomImage, saveCustomMusic, getStorageSizeMB, exportContent, importContent, isFirebaseAvailable, handleImageUpload, handleVideoUpload, cleanupAndFixContent } from '../utils/contentManager';
 
 interface CustomizationPanelProps {
   isOpen: boolean;
@@ -19,7 +19,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
   onGameReset
 }) => {
   const [content, setContent] = useState<WebsiteContent>(currentContent);
-  const [activeTab, setActiveTab] = useState<'text' | 'images' | 'music' | 'games'>('text');
+  const [activeTab, setActiveTab] = useState<'text' | 'images' | 'music' | 'games' | 'videos'>('text');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedImageKey, setSelectedImageKey] = useState<string>('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -295,7 +295,8 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
     { id: 'text', label: 'Text Content', icon: FileText },
     { id: 'images', label: 'Images', icon: ImageIcon },
     { id: 'music', label: 'Music', icon: Music },
-    { id: 'games', label: 'Games Customize', icon: Heart }
+    { id: 'games', label: 'Games Customize', icon: Heart },
+    { id: 'videos', label: 'Videos', icon: Video }
   ];
 
   if (!isOpen) return null;
@@ -377,7 +378,7 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as 'text' | 'images' | 'music' | 'games')}
+                onClick={() => setActiveTab(tab.id as 'text' | 'images' | 'music' | 'games' | 'videos')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? 'bg-pink-500 text-white'
@@ -2310,6 +2311,169 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
                    </div>
                  </div>
                </div>
+            </div>
+          )}
+
+          {/* Videos Tab */}
+          {activeTab === 'videos' && (
+            <div className="space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-blue-800 mb-2">📹 Video Management</h3>
+                <p className="text-sm text-blue-600 mb-4">
+                  Upload one special video with a love note. It will be displayed in the main section for all users to see.
+                </p>
+                
+                {/* Video Upload Section */}
+                <div className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 mb-6">
+                  <h4 className="font-medium text-gray-800 mb-3 text-sm sm:text-base">📹 Upload Special Video</h4>
+                  
+                  <div className="space-y-3 sm:space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Video Title
+                      </label>
+                      <input
+                        type="text"
+                        value={content.video?.title || ''}
+                        onChange={(e) => setContent({
+                          ...content,
+                          video: {
+                            ...content.video,
+                            title: e.target.value,
+                            videoUrl: content.video?.videoUrl || '',
+                            note: content.video?.note || '',
+                            uploadedAt: content.video?.uploadedAt || ''
+                          }
+                        })}
+                        placeholder="Enter a title for your video..."
+                        className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm sm:text-base"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Love Note
+                      </label>
+                      <textarea
+                        value={content.video?.note || ''}
+                        onChange={(e) => setContent({
+                          ...content,
+                          video: {
+                            ...content.video,
+                            note: e.target.value,
+                            videoUrl: content.video?.videoUrl || '',
+                            title: content.video?.title || '',
+                            uploadedAt: content.video?.uploadedAt || ''
+                          }
+                        })}
+                        placeholder="Write a special note for this video..."
+                        rows={3}
+                        className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent resize-none text-sm sm:text-base"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Upload Video File
+                      </label>
+                      <input
+                        type="file"
+                        accept="video/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            try {
+                              const videoUrl = await handleVideoUpload(file);
+                              setContent({
+                                ...content,
+                                video: {
+                                  videoUrl,
+                                  title: content.video?.title || 'Untitled Video',
+                                  note: content.video?.note || '',
+                                  uploadedAt: new Date().toISOString()
+                                }
+                              });
+                            } catch (error) {
+                              alert(error instanceof Error ? error.message : 'Error uploading video');
+                            }
+                            
+                            // Reset file input
+                            e.target.value = '';
+                          }
+                        }}
+                        className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-sm sm:text-base"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Current Video Display */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Current Video
+                    </label>
+                    
+                    {content.video?.videoUrl ? (
+                      <div className="bg-white p-4 rounded-lg border border-gray-200">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <h4 className="font-medium text-gray-800 mb-1">{content.video.title || 'Untitled Video'}</h4>
+                            <p className="text-sm text-gray-600 mb-2">{content.video.note || 'No note added'}</p>
+                            {content.video.uploadedAt && (
+                              <div className="text-xs text-gray-500">
+                                Uploaded: {new Date(content.video.uploadedAt).toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => setContent({
+                              ...content,
+                              video: {
+                                videoUrl: '',
+                                note: '',
+                                title: '',
+                                uploadedAt: ''
+                              }
+                            })}
+                            className="text-red-500 hover:text-red-700 p-1 ml-2"
+                            title="Remove Video"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        
+                        {/* Video Preview */}
+                        <div className="relative">
+                          <video
+                            src={content.video.videoUrl}
+                            className="w-full h-24 sm:h-32 md:h-40 object-cover rounded-lg border border-gray-200"
+                            controls
+                            playsInline
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <Video className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                        <p>No video uploaded yet</p>
+                        <p className="text-sm">Upload a video using the form above</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <h4 className="font-medium text-yellow-800 mb-2">💡 Video Tips</h4>
+                    <ul className="text-sm text-yellow-700 space-y-1">
+                      <li>• Keep video files under 5MB for best performance</li>
+                      <li>• Supported formats: MP4, WebM, MOV, AVI</li>
+                      <li>• Video will be visible to all users in the main section</li>
+                      <li>• You can update the title and note anytime</li>
+                      <li>• Videos are stored locally for reliability</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

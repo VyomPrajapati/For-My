@@ -17,6 +17,7 @@ import UserInfo from './components/UserInfo';
 import CustomizationSystem from './components/CustomizationSystem';
 import LoveNotesSystem from './components/LoveNotesSystem';
 import LoveGarden from './components/LoveGarden';
+import AdminVideoSection from './components/AdminVideoSection';
 import { 
   WebsiteContent, 
   defaultContent, 
@@ -981,6 +982,16 @@ function App() {
             </p>
           </motion.div>
         </ScrollReveal>
+
+        {/* Admin Video Section */}
+        <AdminVideoSection
+          isAdmin={isKaleshiAuratUser}
+          video={safeWebsiteContent.video || { videoUrl: '', note: '', title: '', uploadedAt: '' }}
+          onVideoUpdate={(video) => {
+            const updatedContent = { ...safeWebsiteContent, video };
+            handleContentUpdate(updatedContent);
+          }}
+        />
       </div>
 
       {/* Letter Modal */}

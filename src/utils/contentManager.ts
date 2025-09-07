@@ -5,6 +5,7 @@ import { db } from '../firebase/config';
 // Constants for storage management
 const MAX_IMAGE_SIZE_MB = 0.2; // 200KB - More reasonable size
 const MAX_MUSIC_SIZE_MB = 2.0; // 2MB
+const MAX_VIDEO_SIZE_MB = 5.0; // 5MB - Compatible with Firebase
 const STORAGE_WARNING_THRESHOLD_MB = 4.0; // 4MB
 
 // Helper function to get data URL size in MB
@@ -78,6 +79,14 @@ export interface WebsiteContent {
   profilePictures: {
     kaleshiAurat?: string;
     user?: string;
+  };
+  
+  // Video Section - Single video
+  video: {
+    videoUrl: string;
+    note: string;
+    title: string;
+    uploadedAt: string;
   };
   
   // Game Stats (for tracking completion and achievements)
@@ -208,6 +217,14 @@ export const defaultContent: WebsiteContent = {
   // Profile pictures - empty by default
   profilePictures: {},
   
+  // Video - empty by default
+  video: {
+    videoUrl: '',
+    note: '',
+    title: '',
+    uploadedAt: ''
+  },
+  
   // Game Stats - default values
   gameStats: {
     memoryCardCompleted: false,
@@ -319,6 +336,43 @@ export const saveContent = (content: WebsiteContent): void => {
       return;
     }
     
+    // Handle videos separately (Firebase has strict 1MB limit)
+    if (cleanedContent.video?.videoUrl && getDataUrlSize(cleanedContent.video.videoUrl) > 0.3) {
+      console.warn('⚠️ Video detected. Storing video separately for Firebase compatibility.');
+      
+      // Store video separately
+      const videoId = cleanedContent.video.uploadedAt || Date.now().toString();
+      localStorage.setItem(`video_${videoId}`, cleanedContent.video.videoUrl);
+      
+      // Create content without video data for main storage
+      const contentWithoutVideo = {
+        ...cleanedContent,
+        video: {
+          ...cleanedContent.video,
+          videoUrl: `local_video_${videoId}` // Reference to separate storage
+        }
+      };
+      
+      try {
+        localStorage.setItem('websiteContent', JSON.stringify(contentWithoutVideo));
+        console.log('✅ Video stored separately. Content saved successfully.');
+        
+        // Try to save to Firebase without video
+        const contentSize = JSON.stringify(contentWithoutVideo).length;
+        if (isFirebaseAvailable() && contentSize <= 800000) {
+          saveContentToFirebase(contentWithoutVideo).catch(error => {
+            console.warn('⚠️ Firebase save failed, but localStorage save succeeded:', error);
+          });
+        }
+      } catch (storageError) {
+        console.error('❌ Failed to save content even without video:', storageError);
+        alert('❌ Content too large to save. Please try a smaller video.');
+        return;
+      }
+      
+      return;
+    }
+    
     // Check content size before saving
     const contentSize = JSON.stringify(cleanedContent).length;
     const maxFirebaseSize = 800000; // Leave buffer below 1MB limit
@@ -340,12 +394,16 @@ export const saveContent = (content: WebsiteContent): void => {
     if (isFirebaseAvailable() && contentSize <= maxFirebaseSize) {
       saveContentToFirebase(cleanedContent).catch(error => {
         console.warn('⚠️ Firebase save failed, but localStorage save succeeded:', error);
+        // Show user-friendly error message
+        alert('⚠️ Failed to sync to cloud storage. Your changes are saved locally.');
       });
     } else if (contentSize > maxFirebaseSize) {
       console.warn('⚠️ Content too large for Firebase (', contentSize, 'bytes). Saving to localStorage only.');
+      alert('⚠️ Content too large for cloud sync. Your changes are saved locally.');
     }
   } catch (error) {
     console.error('Error saving content:', error);
+    alert('❌ Error saving content. Please try again.');
   }
 };
 
@@ -366,6 +424,16 @@ export const loadContent = async (): Promise<WebsiteContent> => {
     const saved = localStorage.getItem('websiteContent');
     if (saved) {
       const parsed = JSON.parse(saved);
+      
+      // Check if video is stored separately
+      if (parsed.video?.videoUrl?.startsWith('local_video_')) {
+        const videoId = parsed.video.videoUrl.replace('local_video_', '');
+        const videoData = localStorage.getItem(`video_${videoId}`);
+        if (videoData) {
+          parsed.video.videoUrl = videoData;
+        }
+      }
+      
       return { ...defaultContent, ...parsed };
     }
   } catch (error) {
@@ -852,6 +920,45 @@ export const handleImageUpload = async (file: File, maxSizeMB: number = 0.2): Pr
         }
       };
       reader.onerror = () => reject(new Error('Error reading file'));
+      reader.readAsDataURL(file);
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
+
+// Function to handle video uploads with size checking
+export const handleVideoUpload = async (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    try {
+      // Validate file
+      if (!file || !(file instanceof File)) {
+        reject(new Error('Invalid file provided'));
+        return;
+      }
+      
+      // Check file size
+      const fileSizeMB = file.size / (1024 * 1024);
+      if (fileSizeMB > MAX_VIDEO_SIZE_MB) {
+        reject(new Error(`Video file is too large (${fileSizeMB.toFixed(1)}MB). Maximum size is ${MAX_VIDEO_SIZE_MB}MB.`));
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          if (!event.target || !event.target.result) {
+            reject(new Error('Failed to read video file'));
+            return;
+          }
+          
+          const result = event.target.result as string;
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = () => reject(new Error('Error reading video file'));
       reader.readAsDataURL(file);
     } catch (error) {
       reject(error);
