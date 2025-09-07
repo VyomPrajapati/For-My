@@ -292,10 +292,10 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
   };
 
   const tabs = [
-    { id: 'text', label: 'Text Content', icon: FileText },
+    { id: 'text', label: 'Text', icon: FileText },
     { id: 'images', label: 'Images', icon: ImageIcon },
     { id: 'music', label: 'Music', icon: Music },
-    { id: 'games', label: 'Games Customize', icon: Heart },
+    { id: 'games', label: 'Games', icon: Heart },
     { id: 'videos', label: 'Videos', icon: Video }
   ];
 
@@ -374,17 +374,18 @@ const CustomizationPanel: React.FC<CustomizationPanelProps> = ({
 
         {/* Tabs - Fixed below save button */}
         <div className="bg-white border-b border-gray-200 flex-shrink-0">
-          <div className="flex space-x-1 p-2">
+          <div className="flex space-x-1 p-2 overflow-x-auto">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as 'text' | 'images' | 'music' | 'games' | 'videos')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 flex items-center gap-1 ${
                   activeTab === tab.id
                     ? 'bg-pink-500 text-white'
                     : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
                 }`}
               >
+                <tab.icon className="w-3 h-3 sm:w-4 sm:h-4" />
                 {tab.label}
               </button>
             ))}
